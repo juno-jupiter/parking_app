@@ -5,24 +5,29 @@ import 'location_card.dart';
 import 'my_search_bar.dart';
 
 class MyListViewPage extends StatefulWidget {
-  const MyListViewPage({super.key});
+  final List<Location> locationList;
+  const MyListViewPage(this.locationList, {super.key});
 
   @override
   State<MyListViewPage> createState() => _MyListViewPageState();
 }
 
 class _MyListViewPageState extends State<MyListViewPage> {
-  bool isListView = true;
+  final double dragTriggerRange = 200.0;
+  double initialDrag = 0.0;
+  double currentDrag = 0.0;
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<MyAppState>(context, listen: true);
 
     Widget goToMapButton = ElevatedButton(
-      onPressed: () {appState.toggleMapView();},
+      onPressed: () {
+        appState.toggleMapView();
+        },
       child: const Wrap(
           children: [
-            Icon(Icons.map, color: Colors.white,),
+            Icon(Icons.map, color: Colors.white, size: 16,),
             Text('Mapa', style: TextStyle(color: Colors.white),)
           ]
       ),
@@ -32,30 +37,38 @@ class _MyListViewPageState extends State<MyListViewPage> {
       children: [
         Column(
           children: [
+            const SizedBox(height: 36,),
             const MySearchBar(),
             Expanded(
-              child: ListView.builder(
-                  padding: const EdgeInsets.all(8),
-                  itemCount: 3,
-                  itemBuilder: (BuildContext context, int index) {
-                    return const LocationCard();
-                  }
+              child: Card(
+                child: ListView.builder(
+                    padding: const EdgeInsets.all(2),
+                    itemCount: widget.locationList.length,
+                    itemBuilder: (BuildContext context, int index) {return LocationCard(widget.locationList[index],);}),
               ),
             ),
           ],
         ),
-        Column(
-          children: [
-            Expanded(child: Container(child: null,)),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Container(
-                height: 40,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(30),),
-                  child: goToMapButton
+        GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onVerticalDragStart: (DragStartDetails details) {initialDrag = details.globalPosition.dy;},
+          onVerticalDragUpdate: (DragUpdateDetails details) {
+            currentDrag = details.globalPosition.dy;
+            if (currentDrag > (initialDrag + dragTriggerRange)) {appState.toggleMapView();}
+          },
+          child: Column(
+            children: [
+              Expanded(child: Container(child: null,)),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Container(
+                  height: 40,
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(30),),
+                    child: goToMapButton
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         )
       ],
     );

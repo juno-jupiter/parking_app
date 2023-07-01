@@ -1,162 +1,119 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:parking_app/my_app_state.dart';
 import 'package:provider/provider.dart';
+import 'package:parking_app/my_app_state.dart';
 
 class LocationPage extends StatefulWidget {
-  const LocationPage({super.key});
-
+  final Location location;
+  const LocationPage(this.location, { super.key });
   @override
   State<LocationPage> createState() => _LocationPageState();
 }
 
 class _LocationPageState extends State<LocationPage> {
-  bool isFav = false;
-  double rating = 3.5;
-  double precio = 1000;
-  String nombre = 'Plaza Ñuñoa';
-  String imageFile = 'assets/nunoa.jpg';
-  String tiempo = 'Precio para 1 hora';
-
   @override
   Widget build(BuildContext context) {
-    dynamic currentTime = DateFormat.jm().format(DateTime.now());
-    dynamic nextTime = DateFormat.jm().format(DateTime.now().add(const Duration(hours: 1,)));
+    final appState = Provider.of<MyAppState>(context, listen: true);
+    widget.location.recalculateTotalCost(appState.getTotalDuration());
 
-    var currentFavIcon = Icons.favorite_outline;
-    if (isFav) {
-      currentFavIcon = Icons.favorite;
-    }
+    bool isFav = appState.favLocations.contains(widget.location.id);
+    Image? cardImage;
+    if (widget.location.id > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
+    int estacionamientos = widget.location.estacionamientosLista.length;
+    String stringDisponibilidad = '$estacionamientos estacionamientos disponibles';
+    if (estacionamientos == 1) {stringDisponibilidad = '1 estacionamiento disponible';}
+
+    double precioTotal = widget.location.precioTotal;
+    String precioCompleto = (widget.location.estacionamientosLista.length > 1) ? 'Desde \$$precioTotal ${appState.moneda}' : '\$$precioTotal ${appState.moneda}';
+    String stringRangoTiempo = LocationCard.getTimeRangeString(appState);
+    String titulo = widget.location.nombre;
+    double rating = widget.location.rating;
 
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
         title: Column(
           children: [
-            Align(alignment: Alignment.centerLeft, child: Text(nombre)),
-            Align(alignment: Alignment.centerLeft, child: Text(tiempo, style: const TextStyle(fontSize: 10))),
+            Align(alignment: Alignment.centerLeft, child: Text(titulo)),
+            Align(alignment: Alignment.centerLeft, child: Text(stringRangoTiempo, style: const TextStyle(fontSize: 10))),
           ],
         ),
         actions: [
           IconButton(
-            onPressed: () => setState(() => isFav = !isFav),
-            icon: Icon(currentFavIcon),
+            onPressed: () {appState.toggleFavoriteLocation(widget.location);},
+            icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
           )
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
+      body: Column(
         children: [
-          Image(image: AssetImage(imageFile)),
-          const SizedBox(height: 10,),
-          ListTile(
-            title: Column(
-              children: [Align(alignment: Alignment.centerLeft, child: Text(nombre, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, ), )),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Icon(Icons.star),
-                ),
-              ],
-            ),
+          ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(20),
+            children: [
+              SizedBox(width: double.infinity, height: 300, child: FittedBox(fit: BoxFit.fill, child: cardImage,)),
+              const SizedBox(height: 10,),
+            ],
           ),
-          const SizedBox(height: 10,),
-          ListTile(
-            title: Column(
-              children: [
-                Align(alignment: Alignment.centerLeft, child: Text('$tiempo:', style: const TextStyle(fontWeight: FontWeight.bold),),),
-                Align(alignment: Alignment.centerLeft, child: Text('CL \$$precio',),),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10,),
-          ListTile(
-            title: Column(
-              children: [
-                Row(
-                  children: [
-                    Column(
-                      children: [
-                        const Align(alignment: Alignment.centerLeft, child: Text('Desde', style: TextStyle(fontWeight: FontWeight.bold),),),
-                        Align(alignment: Alignment.centerLeft, child: Text('$currentTime',),),
-                      ],
-                    ),
-                    const SizedBox(width: 20,),
-                    Column(
-                      children: [
-                        const Align(alignment: Alignment.centerLeft, child: Text('Hasta', style: TextStyle(fontWeight: FontWeight.bold),),),
-                        Align(alignment: Alignment.centerLeft, child: Text('$nextTime',),),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 5,),
-                const Align(alignment: Alignment.centerLeft, child: Text('Características', style: TextStyle(fontWeight: FontWeight.bold),),),
-                const Align(alignment: Alignment.centerLeft, child: Text('Casa',),),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10,),
         ],
       ),
     );
   }
-
 }
 
 class LocationCard extends StatefulWidget {
-  const LocationCard({super.key});
-
+  final Location location;
+  const LocationCard(this.location, { super.key });
   @override
   State<LocationCard> createState() => _LocationCardState();
-}
 
-class _LocationCardState extends State<LocationCard> {
-  bool isFav = false;
-  double rating = 3.5;
-  double estacionamientos = 1;
-  double precio = 1000;
-  String titulo = 'Plaza Ñuñoa';
-  String imageFile = 'assets/nunoa.jpg';
-  String tiempo = 'Precio para 1 hora';
-  String moneda = 'CLP';
-  DateTime fechaHoraDesde = DateTime.now();
-  DateTime fechaHoraHasta = DateTime.now().add(const Duration(hours: 1));
-
-  String formatDate(DateTime dateTime, String languageTag) {
+  static String formatDate(DateTime dateTime, String languageTag) {
     String dia = DateFormat('EEEE', languageTag).format(dateTime);
     String diaMes = '${dateTime.day} ${DateFormat('MMMM', languageTag).format(dateTime).substring(0, 3)}';
     return '${dia.substring(0, 3)}., $diaMes.';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final appState = Provider.of<MyAppState>(context, listen: true);
+  static String getTimeRangeString(MyAppState appState) {
+    DateTime fechaHoraDesde = appState.searchFilters['fecha_hora_desde'];
+    DateTime fechaHoraHasta = appState.searchFilters['fecha_hora_hasta'];
+    if (fechaHoraDesde.day != fechaHoraHasta.day) {return '${formatDate(fechaHoraDesde, appState.languageTag)}-${formatDate(fechaHoraHasta, appState.languageTag)}';}
+    return '${DateFormat('jm', appState.languageTag).format(fechaHoraDesde)}-${DateFormat('jm', appState.languageTag).format(fechaHoraHasta)}';
+  }
+}
+
+class _LocationCardState extends State<LocationCard> {
+  Card getLocationCard(BuildContext context, MyAppState appState) {
     TextStyle boldStyle = const TextStyle(fontWeight: FontWeight.bold,);
     TextStyle ratingStyle = const TextStyle(color: Colors.black,);
+    widget.location.recalculateTotalCost(appState.getTotalDuration());
 
-    var stringDisponibilidad = '$estacionamientos estacionamientos disponibles';
-    if (estacionamientos == 1) {
-      stringDisponibilidad = '1 estacionamiento disponible';
-    }
+    bool isFav = appState.favLocations.contains(widget.location.id);
+    Image? cardImage;
+    if (widget.location.id > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
+    int estacionamientos = widget.location.estacionamientosLista.length;
+    String stringDisponibilidad = '$estacionamientos estacionamientos disponibles';
+    if (estacionamientos == 1) {stringDisponibilidad = '1 estacionamiento disponible';}
 
-    String stringRangoTiempo;
-    if (fechaHoraDesde.day != fechaHoraHasta.day) {
-      stringRangoTiempo = '${formatDate(fechaHoraDesde, appState.languageTag)}-${formatDate(fechaHoraHasta, appState.languageTag)}';
-    } else {
-      stringRangoTiempo = '${DateFormat('jm', appState.languageTag).format(fechaHoraDesde)}-${DateFormat('jm', appState.languageTag).format(fechaHoraHasta)}';
-    }
-
-    double totalDuration = fechaHoraHasta.difference(fechaHoraDesde).inMinutes.toDouble() / 60.0;
-    String precioCompleto = '\$${precio * totalDuration} $moneda';
+    double precioTotal = widget.location.precioTotal;
+    String precioCompleto = (widget.location.estacionamientosLista.length > 1) ? 'Desde \$$precioTotal ${appState.moneda}' : '\$$precioTotal ${appState.moneda}';
+    String stringRangoTiempo = LocationCard.getTimeRangeString(appState);
+    String titulo = widget.location.nombre;
+    double rating = widget.location.rating;
 
     return Card(
       clipBehavior: Clip.hardEdge,
       child: InkWell(
         splashColor: Theme.of(context).primaryColor.withAlpha(30),
-        onTap: () {Navigator.of(context).push(MaterialPageRoute(builder: (context)=> const LocationPage()));},
+        onTap: () {
+          appState.toggleLocationPage(widget.location);
+          Navigator.of(context).push(MaterialPageRoute(builder: (context)=> LocationPage(widget.location,)));
+          },
         child: Row(
           children: [
-            SizedBox(width: 150,child: Image(image: AssetImage(imageFile)),),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 140),
+                child: SizedBox(width: 150, height: double.infinity, child: FittedBox(clipBehavior: Clip.hardEdge, fit: BoxFit.fill, child: cardImage,))
+            ),
             Expanded(
               child: ListTile(
                 title: Row(
@@ -170,7 +127,7 @@ class _LocationCardState extends State<LocationCard> {
                       ),
                     ),
                     IconButton(
-                      onPressed: () {setState(() => isFav = !isFav);},
+                      onPressed: () {appState.toggleFavoriteLocation(widget.location);},
                       icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
                     ),
                   ],
@@ -199,5 +156,11 @@ class _LocationCardState extends State<LocationCard> {
         ),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = Provider.of<MyAppState>(context, listen: true);
+    return getLocationCard(context, appState);
   }
 }

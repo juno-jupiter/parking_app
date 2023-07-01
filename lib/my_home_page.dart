@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite/sqflite.dart';
 import 'my_app_state.dart';
 import 'my_map_page.dart';
 import 'my_listview_page.dart';
@@ -10,19 +11,26 @@ import 'my_messages_page.dart';
 import 'my_account_page.dart';
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  final Database database;
+  const MyHomePage(this.database, {super.key});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  List<Location> locationList = [];
   var selectedIndex = 0;
 
   @override
   void initState(){
     super.initState();
     initializeDateFormatting();
+    Future.delayed(Duration.zero,() async {
+      List<Location> foundList = await Location.getLocationList(widget.database);
+      setState(() {locationList = foundList;}
+      );
+    },);
   }
 
   @override
@@ -31,9 +39,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     Widget page;  // Elige ventana
     String appBarTitle = '';
+
     switch (selectedIndex) {
       case 0:
-        page = appState.isListView ? const MyListViewPage() : const MyMapPage();
+        page = appState.isListView ? MyListViewPage(locationList) : MyMapPage(locationList);
         break;
       case 1:
         page = const MyFavoritesPage();
@@ -90,12 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
       },
     );
 
-    return Scaffold(
-      appBar: selectedAppBar,
-      body: Center(
-        child: page,
-      ),
-      bottomNavigationBar: myBottomNavigationBar,
-    );
+    Scaffold mainScaffold = Scaffold(appBar: selectedAppBar, body: Center(child: page,), bottomNavigationBar: myBottomNavigationBar,);
+    return mainScaffold;
   }
 }
