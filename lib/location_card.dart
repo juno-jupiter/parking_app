@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:parking_app/table_entities.dart';
 import 'package:parking_app/my_app_state.dart';
 
 class LocationPage extends StatefulWidget {
@@ -15,9 +16,9 @@ class _LocationPageState extends State<LocationPage> {
     final appState = Provider.of<MyAppState>(context, listen: true);
     widget.location.recalculateTotalCost(appState.getTotalDuration());
 
-    bool isFav = appState.favLocations.contains(widget.location.id);
+    bool isFav = appState.favLocations.contains(widget.location.idLocation);
     Image? cardImage;
-    if (widget.location.id > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
+    if (widget.location.idLocation > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
     int estacionamientos = widget.location.estacionamientosLista.length;
     String stringDisponibilidad = '$estacionamientos estacionamientos disponibles';
     if (estacionamientos == 1) {stringDisponibilidad = '1 estacionamiento disponible';}
@@ -25,8 +26,8 @@ class _LocationPageState extends State<LocationPage> {
     double precioTotal = widget.location.precioTotal;
     String precioCompleto = (widget.location.estacionamientosLista.length > 1) ? 'Desde \$$precioTotal ${appState.moneda}' : '\$$precioTotal ${appState.moneda}';
     String stringRangoTiempo = getTimeRangeString(appState);
-    String titulo = widget.location.nombre;
-    double rating = widget.location.rating;
+    String titulo = widget.location.tituloLocation;
+    double rating = widget.location.ratingLocation;
 
     return Scaffold(
       appBar: AppBar(
@@ -73,9 +74,9 @@ class _LocationCardState extends State<LocationCard> {
     TextStyle ratingStyle = const TextStyle(color: Colors.black,);
     widget.location.recalculateTotalCost(appState.getTotalDuration());
 
-    bool isFav = appState.favLocations.contains(widget.location.id);
+    bool isFav = appState.favLocations.contains(widget.location.idLocation);
     Image? cardImage;
-    if (widget.location.id > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
+    if (widget.location.idLocation > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
     int estacionamientos = widget.location.estacionamientosLista.length;
     String stringDisponibilidad = '$estacionamientos estacionamientos disponibles';
     if (estacionamientos == 1) {stringDisponibilidad = '1 estacionamiento disponible';}
@@ -83,8 +84,8 @@ class _LocationCardState extends State<LocationCard> {
     double precioTotal = widget.location.precioTotal;
     String precioCompleto = (widget.location.estacionamientosLista.length > 1) ? 'Desde \$$precioTotal ${appState.moneda}' : '\$$precioTotal ${appState.moneda}';
     String stringRangoTiempo = getTimeRangeString(appState);
-    String titulo = widget.location.nombre;
-    double rating = widget.location.rating;
+    String titulo = widget.location.tituloLocation;
+    double rating = widget.location.ratingLocation;
 
     return Card(
       clipBehavior: Clip.hardEdge,

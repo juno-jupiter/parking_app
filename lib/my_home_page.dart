@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
-import 'my_app_state.dart';
-import 'my_map_page.dart';
-import 'my_listview_page.dart';
-import 'my_favorites_page.dart';
-import 'my_scheduled_page.dart';
-import 'my_messages_page.dart';
-import 'my_account_page.dart';
+import 'package:provider/provider.dart';
+import 'package:parking_app/table_entities.dart';
+import 'package:parking_app/my_app_state.dart';
+import 'package:parking_app/my_map_page.dart';
+import 'package:parking_app/my_listview_page.dart';
+import 'package:parking_app/my_favorites_page.dart';
+import 'package:parking_app/my_scheduled_page.dart';
+import 'package:parking_app/my_messages_page.dart';
+import 'package:parking_app/my_account_page.dart';
 
 class MyHomePage extends StatefulWidget {
   final Database database;
@@ -21,28 +22,38 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<Location> locationList = [];
   var selectedIndex = 0;
+  MyAppState? appState;
 
   @override
   void initState(){
     super.initState();
     initializeDateFormatting();
-    Future.delayed(Duration.zero,() async {
-      List<Location> foundList = await Location.getLocationList(widget.database);
-      setState(() {locationList = foundList;}
-      );
-    },);
+    Future.delayed(Duration.zero, () async {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        List<Location> newLocs = await appState!.getLocationList();
+        setState(() {locationList = newLocs;});
+        appState?.reloadCallBack = reloadSearch;
+      });
+    });
+
+  }
+
+  Future<void> reloadSearch(MyAppState newAppState) async {
+    appState = newAppState;
+    List<Location> foundList = await appState!.getLocationList();
+    setState(() {locationList = foundList;});
   }
 
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<MyAppState>(context, listen: true);
-
+    appState = Provider.of<MyAppState>(context, listen: true);
+    if (appState != null) appState?.reloadCallBack = reloadSearch;
     Widget page;  // Elige ventana
     String appBarTitle = '';
 
     switch (selectedIndex) {
       case 0:
-        page = appState.isListView ? MyListViewPage(locationList) : MyMapPage(locationList);
+        page = (appState!.isListView) ? MyListViewPage(locationList) : MyMapPage(locationList);
         break;
       case 1:
         page = const MyFavoritesPage();

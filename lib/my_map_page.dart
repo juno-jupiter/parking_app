@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:parking_app/my_search_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'my_app_state.dart';
-import 'location_card.dart';
+import 'package:parking_app/table_entities.dart';
+import 'package:parking_app/my_app_state.dart';
+import 'package:parking_app/location_card.dart';
+import 'package:parking_app/my_search_bar.dart';
 
 class MyMapPage extends StatefulWidget {
   final List<Location> locationList;
@@ -16,13 +17,19 @@ class MyMapPage extends StatefulWidget {
 }
 
 class _MyMapPageState extends State<MyMapPage> {
-  final double dragTriggerRange = 150.0;
+  final double dragTriggerRange = 100.0;
   double initialDrag = 0.0;
   double currentDrag = 0.0;
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<MyAppState>(context, listen: true);
+    int numEstacionamientos = 0;
+    for (var location in widget.locationList){
+      location.recalculateTotalCost(appState.getTotalDuration());
+      numEstacionamientos += location.estacionamientosLista.length;
+    }
+
     Widget mapView = FlutterMap(
       options: MapOptions(
         center: const LatLng(-33.45260687351389, -70.59197637461642),
@@ -51,12 +58,10 @@ class _MyMapPageState extends State<MyMapPage> {
     );
 
     String estacionamientosDisponibles = (widget.locationList.length == 1) ?
-    '${widget.locationList.length} estacionamiento disponible' : '${widget.locationList.length} estacionamientos disponibles';
+    '$numEstacionamientos estacionamiento disponible' : '$numEstacionamientos estacionamientos disponibles';
 
-    MySearchBar searchBar =  const MySearchBar();
+    MySearchBar searchBar = const MySearchBar();
     List<Widget> locationCardViewChildren = [const Expanded(child:Center(child:null),),];
-
-
 
     if (appState.selectedLocation != null) {
       Widget selectedLocationWidget = Stack(children: [
@@ -75,17 +80,23 @@ class _MyMapPageState extends State<MyMapPage> {
         currentDrag = details.globalPosition.dy;
         if (currentDrag < (initialDrag - dragTriggerRange)) {appState.toggleListView();}
       },
-      child: Card(child: SizedBox(
+      child: SizedBox(
         height: MySearchBar.height,
-        child: Center(child: Column(
-          children: [
-            const Icon(Icons.drag_handle),
-            Text(estacionamientosDisponibles, style: const TextStyle(fontWeight: FontWeight.bold,),),
-          ],
-        ),),
-      ),),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(topRight: Radius.circular(30), topLeft: Radius.circular(30)),
+          ),
+          child: Center(child: Column(
+            children: [
+              const Icon(Icons.drag_handle),
+              Text(estacionamientosDisponibles, style: const TextStyle(fontWeight: FontWeight.bold,),),
+            ],
+          ),),
+        ),
+      )
     );
-    locationCardViewChildren.add(openListView);
+    if (!appState.isListView){locationCardViewChildren.add(openListView);}
 
     return Stack(
       children: [
@@ -115,7 +126,7 @@ class MyMarkerLayer extends StatelessWidget {
     double precioTotal = location.precioTotal;
     markerString = '\$$precioTotal';
 
-    isSelected = appState.selectedLocation?.id == location.id;
+    isSelected = appState.selectedLocation?.idLocation == location.idLocation;
     if (isSelected) {
       markerColor = Theme.of(context).primaryColor;
       textColor = Colors.white;

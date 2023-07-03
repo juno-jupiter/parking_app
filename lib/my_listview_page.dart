@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'my_app_state.dart';
-import 'location_card.dart';
-import 'my_search_bar.dart';
+import 'package:parking_app/table_entities.dart';
+import 'package:parking_app/my_app_state.dart';
+import 'package:parking_app/location_card.dart';
+import 'package:parking_app/my_search_bar.dart';
 
 class MyListViewPage extends StatefulWidget {
   final List<Location> locationList;
@@ -22,9 +23,7 @@ class _MyListViewPageState extends State<MyListViewPage> {
     final appState = Provider.of<MyAppState>(context, listen: true);
 
     Widget goToMapButton = ElevatedButton(
-      onPressed: () {
-        appState.toggleMapView();
-        },
+      onPressed: () {appState.toggleMapView();},
       child: const Wrap(
           children: [
             Icon(Icons.map, color: Colors.white, size: 16,),
@@ -34,53 +33,37 @@ class _MyListViewPageState extends State<MyListViewPage> {
     );
     MySearchBar searchBar = const MySearchBar();
 
-    return Stack(
-      children: [
-        Column(children: [const SizedBox(height: MySearchBar.topMargin,), searchBar,],),
-        Column(
-          children: [
-            const SizedBox(height: MySearchBar.topMargin + MySearchBar.height,),
-            GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onVerticalDragStart: (DragStartDetails details) {initialDrag = details.globalPosition.dy;},
-              onVerticalDragUpdate: (DragUpdateDetails details) {
-                currentDrag = details.globalPosition.dy;
-                if (currentDrag > (initialDrag + dragTriggerRange)) {appState.toggleMapView();}
-              },
-              child: const Card(child: SizedBox(height: MySearchBar.height * 0.5, child: Center(child: Icon(Icons.drag_handle),),),),
-            ),
-            Expanded(
-              child: Card(
+    return SizedBox(
+      child: Stack(
+        children: [
+          Column(children: [const SizedBox(height: MySearchBar.topMargin,), searchBar,],),
+          Column(
+            children: [
+              const SizedBox(height: MySearchBar.topMargin * 3.0,),
+              Expanded(
                 child: ListView.builder(
                     padding: const EdgeInsets.all(2),
                     itemCount: widget.locationList.length,
-                    itemBuilder: (BuildContext context, int index) {return LocationCard(widget.locationList[index],);}),
+                    itemBuilder: (BuildContext context, int index) {return LocationCard(widget.locationList[index],);}
+                ),
               ),
-            ),
-          ],
-        ),
-        GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onVerticalDragStart: (DragStartDetails details) {initialDrag = details.globalPosition.dy;},
-          onVerticalDragUpdate: (DragUpdateDetails details) {
-            currentDrag = details.globalPosition.dy;
-            if (currentDrag > (initialDrag + dragTriggerRange)) {appState.toggleMapView();}
-          },
-          child: Column(
+            ],
+          ),
+          Column(
             children: [
               Expanded(child: Container(child: null,)),
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Container(
-                  height: 40,
+                    height: 40,
                     decoration: BoxDecoration(borderRadius: BorderRadius.circular(30),),
                     child: goToMapButton
                 ),
               ),
             ],
           ),
-        )
-      ],
+        ],
+      ),
     );
   }
 }
