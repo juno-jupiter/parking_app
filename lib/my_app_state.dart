@@ -1,5 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:intl/intl.dart';
+
+
+
+String formatDate(DateTime dateTime, String languageTag) {
+  String dia = DateFormat('EEEE', languageTag).format(dateTime);
+  String numDia = dateTime.day.toString().padLeft(2, '0');
+  String diaMes = '$numDia ${DateFormat('MMMM', languageTag).format(dateTime).substring(0, 3)}';
+  return '${dia.substring(0, 3)}., $diaMes.';
+}
+
+String getTimeRangeString(MyAppState appState, {splitTimeDay=true}) {
+  DateTime fechaHoraDesde = appState.searchFilters['fecha_hora_desde'];
+  DateTime fechaHoraHasta = appState.searchFilters['fecha_hora_hasta'];
+  String strHoraDesde = DateFormat('jm', appState.languageTag).format(fechaHoraDesde);
+  String strDiaDesde = formatDate(fechaHoraDesde, appState.languageTag);
+  String strHoraHasta = DateFormat('jm', appState.languageTag).format(fechaHoraHasta);
+  String strDiaHasta = formatDate(fechaHoraHasta, appState.languageTag);
+  String splitter = splitTimeDay ? '\n' : '';
+  if (fechaHoraDesde.day != fechaHoraHasta.day) {
+  return '$strDiaDesde - $strDiaHasta$splitter$strHoraDesde - $strHoraHasta';
+  }
+  return '$strDiaDesde$splitter$strHoraDesde - $strHoraHasta';
+}
+
 
 class MyAppState extends ChangeNotifier {
   final Database database;

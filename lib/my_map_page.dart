@@ -53,6 +53,21 @@ class _MyMapPageState extends State<MyMapPage> {
     String estacionamientosDisponibles = (widget.locationList.length == 1) ?
     '${widget.locationList.length} estacionamiento disponible' : '${widget.locationList.length} estacionamientos disponibles';
 
+    MySearchBar searchBar =  const MySearchBar();
+    List<Widget> locationCardViewChildren = [const Expanded(child:Center(child:null),),];
+
+
+
+    if (appState.selectedLocation != null) {
+      Widget selectedLocationWidget = Stack(children: [
+        LocationCard(appState.selectedLocation!),
+        Opacity(opacity: 0.5, child: IconButton(onPressed: (){
+          appState.toggleLocationMarker(appState.selectedLocation);
+        }, icon: const Icon(Icons.cancel)))
+      ]);
+      locationCardViewChildren.add(selectedLocationWidget);
+    }
+
     Widget openListView = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onVerticalDragStart: (DragStartDetails details) {initialDrag = details.globalPosition.dy;},
@@ -61,7 +76,7 @@ class _MyMapPageState extends State<MyMapPage> {
         if (currentDrag < (initialDrag - dragTriggerRange)) {appState.toggleListView();}
       },
       child: Card(child: SizedBox(
-        height: 60,
+        height: MySearchBar.height,
         child: Center(child: Column(
           children: [
             const Icon(Icons.drag_handle),
@@ -70,32 +85,15 @@ class _MyMapPageState extends State<MyMapPage> {
         ),),
       ),),
     );
+    locationCardViewChildren.add(openListView);
 
-    Widget searchBar = Column(
-        children: [
-          const SizedBox(height: 36,),
-          const MySearchBar(),
-          const Expanded(child:Center(child:null),),
-          openListView,
-        ]
+    return Stack(
+      children: [
+        mapView,
+        Column(children: [const SizedBox(height: MySearchBar.topMargin,), searchBar,],),
+        Column(children: locationCardViewChildren,),
+      ],
     );
-    if (appState.selectedLocation != null) {
-      searchBar = Column(
-          children: [
-            const SizedBox(height: 36,),
-            const MySearchBar(),
-            const Expanded(child:Center(child:null),),
-            Stack(children: [
-              LocationCard(appState.selectedLocation!),
-              Opacity(opacity: 0.5, child: IconButton(onPressed: (){
-                appState.toggleLocationMarker(appState.selectedLocation);
-              }, icon: const Icon(Icons.cancel)))
-            ]),
-            openListView,
-          ]
-      );
-    }
-    return Stack(children: [mapView, searchBar],);
   }
 }
 

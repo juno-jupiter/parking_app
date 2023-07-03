@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:parking_app/my_app_state.dart';
 
@@ -25,7 +24,7 @@ class _LocationPageState extends State<LocationPage> {
 
     double precioTotal = widget.location.precioTotal;
     String precioCompleto = (widget.location.estacionamientosLista.length > 1) ? 'Desde \$$precioTotal ${appState.moneda}' : '\$$precioTotal ${appState.moneda}';
-    String stringRangoTiempo = LocationCard.getTimeRangeString(appState);
+    String stringRangoTiempo = getTimeRangeString(appState);
     String titulo = widget.location.nombre;
     double rating = widget.location.rating;
 
@@ -66,19 +65,6 @@ class LocationCard extends StatefulWidget {
   const LocationCard(this.location, { super.key });
   @override
   State<LocationCard> createState() => _LocationCardState();
-
-  static String formatDate(DateTime dateTime, String languageTag) {
-    String dia = DateFormat('EEEE', languageTag).format(dateTime);
-    String diaMes = '${dateTime.day} ${DateFormat('MMMM', languageTag).format(dateTime).substring(0, 3)}';
-    return '${dia.substring(0, 3)}., $diaMes.';
-  }
-
-  static String getTimeRangeString(MyAppState appState) {
-    DateTime fechaHoraDesde = appState.searchFilters['fecha_hora_desde'];
-    DateTime fechaHoraHasta = appState.searchFilters['fecha_hora_hasta'];
-    if (fechaHoraDesde.day != fechaHoraHasta.day) {return '${formatDate(fechaHoraDesde, appState.languageTag)}-${formatDate(fechaHoraHasta, appState.languageTag)}';}
-    return '${DateFormat('jm', appState.languageTag).format(fechaHoraDesde)}-${DateFormat('jm', appState.languageTag).format(fechaHoraHasta)}';
-  }
 }
 
 class _LocationCardState extends State<LocationCard> {
@@ -96,7 +82,7 @@ class _LocationCardState extends State<LocationCard> {
 
     double precioTotal = widget.location.precioTotal;
     String precioCompleto = (widget.location.estacionamientosLista.length > 1) ? 'Desde \$$precioTotal ${appState.moneda}' : '\$$precioTotal ${appState.moneda}';
-    String stringRangoTiempo = LocationCard.getTimeRangeString(appState);
+    String stringRangoTiempo = getTimeRangeString(appState);
     String titulo = widget.location.nombre;
     double rating = widget.location.rating;
 
@@ -111,7 +97,7 @@ class _LocationCardState extends State<LocationCard> {
         child: Row(
           children: [
             ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 140),
+              constraints: const BoxConstraints(maxHeight: 160),
                 child: SizedBox(width: 150, height: double.infinity, child: FittedBox(clipBehavior: Clip.hardEdge, fit: BoxFit.fill, child: cardImage,))
             ),
             Expanded(

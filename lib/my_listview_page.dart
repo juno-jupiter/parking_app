@@ -13,7 +13,7 @@ class MyListViewPage extends StatefulWidget {
 }
 
 class _MyListViewPageState extends State<MyListViewPage> {
-  final double dragTriggerRange = 200.0;
+  final double dragTriggerRange = 400.0;
   double initialDrag = 0.0;
   double currentDrag = 0.0;
 
@@ -32,13 +32,23 @@ class _MyListViewPageState extends State<MyListViewPage> {
           ]
       ),
     );
+    MySearchBar searchBar = const MySearchBar();
 
     return Stack(
       children: [
+        Column(children: [const SizedBox(height: MySearchBar.topMargin,), searchBar,],),
         Column(
           children: [
-            const SizedBox(height: 36,),
-            const MySearchBar(),
+            const SizedBox(height: MySearchBar.topMargin + MySearchBar.height,),
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onVerticalDragStart: (DragStartDetails details) {initialDrag = details.globalPosition.dy;},
+              onVerticalDragUpdate: (DragUpdateDetails details) {
+                currentDrag = details.globalPosition.dy;
+                if (currentDrag > (initialDrag + dragTriggerRange)) {appState.toggleMapView();}
+              },
+              child: const Card(child: SizedBox(height: MySearchBar.height * 0.5, child: Center(child: Icon(Icons.drag_handle),),),),
+            ),
             Expanded(
               child: Card(
                 child: ListView.builder(
