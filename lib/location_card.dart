@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parking_app/my_filters_page.dart';
 import 'package:provider/provider.dart';
 import 'package:parking_app/table_entities.dart';
 import 'package:parking_app/my_app_state.dart';
@@ -24,35 +25,69 @@ class _LocationPageState extends State<LocationPage> {
     if (estacionamientos == 1) {stringDisponibilidad = '1 estacionamiento disponible';}
 
     double precioTotal = widget.location.precioTotal;
-    String precioCompleto = (widget.location.estacionamientosLista.length > 1) ? 'Desde \$$precioTotal ${appState.moneda}' : '\$$precioTotal ${appState.moneda}';
-    String stringRangoTiempo = getTimeRangeString(appState);
+    String precioCompleto = 'desde \$$precioTotal ${appState.moneda}';
+    String stringRangoTiempo = getTimeRangeString(appState, splitTimeDay: false);
     String titulo = widget.location.tituloLocation;
     double rating = widget.location.ratingLocation;
+    String nombreLocation = widget.location.tituloLocation;
+    String lugarGeneralLocation = '${widget.location.calle}, ${widget.location.comuna}';
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: const BackButton(),
-        title: Column(
-          children: [
-            Align(alignment: Alignment.centerLeft, child: Text(titulo)),
-            Align(alignment: Alignment.centerLeft, child: Text(stringRangoTiempo, style: const TextStyle(fontSize: 10))),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {appState.toggleFavoriteLocation(widget.location);},
-            icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
-          )
+    // Color primaryColor = Theme.of(context).primaryColor;
+
+    AppBar appBar = AppBar(
+      leading: const BackButton(),
+      title: Column(
+        children: [
+          Align(alignment: Alignment.centerLeft, child: Text(titulo)),
+          Align(alignment: Alignment.centerLeft, child: Text(stringRangoTiempo, style: const TextStyle(fontSize: 10))),
         ],
       ),
+      actions: [
+        IconButton(onPressed: () {appState.toggleFavoriteLocation(widget.location);}, icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),)
+      ],
+    );
+
+    Widget galeriaImagenes = SizedBox(
+        width: double.infinity, height: 300,
+        child: FittedBox(
+          fit: BoxFit.fill,
+          child: cardImage,
+        )
+    );
+
+    Widget tarjetaNombre = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Center(
+        child: Column(
+          children: [
+            Text(nombreLocation, style: MyFiltersPage.inputDecoratorLabelStyle,),
+            Text(lugarGeneralLocation, style: LocationCard.boldStyle,),
+            Text('$stringDisponibilidad $precioCompleto'),
+            SizedBox(
+              width: 60,
+              child: Row(
+                children: [
+                  const Align(alignment: Alignment.bottomRight, child: Icon(Icons.star, color: Colors.black, size: 15,)),
+                  Align(alignment: Alignment.centerLeft, child: Text('$rating', style: LocationCard.ratingStyle,),),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+
+    return Scaffold(
+      appBar: appBar,
       body: Column(
         children: [
           ListView(
             shrinkWrap: true,
             padding: const EdgeInsets.all(20),
             children: [
-              SizedBox(width: double.infinity, height: 300, child: FittedBox(fit: BoxFit.fill, child: cardImage,)),
+              galeriaImagenes,
               const SizedBox(height: 10,),
+              tarjetaNombre,
             ],
           ),
         ],
@@ -62,6 +97,8 @@ class _LocationPageState extends State<LocationPage> {
 }
 
 class LocationCard extends StatefulWidget {
+  static const TextStyle boldStyle = TextStyle(fontWeight: FontWeight.bold,);
+  static const TextStyle ratingStyle = TextStyle(color: Colors.black,);
   final Location location;
   const LocationCard(this.location, { super.key });
   @override
@@ -70,8 +107,6 @@ class LocationCard extends StatefulWidget {
 
 class _LocationCardState extends State<LocationCard> {
   Card getLocationCard(BuildContext context, MyAppState appState) {
-    TextStyle boldStyle = const TextStyle(fontWeight: FontWeight.bold,);
-    TextStyle ratingStyle = const TextStyle(color: Colors.black,);
     widget.location.recalculateTotalCost(appState.getTotalDuration());
 
     bool isFav = appState.favLocations.contains(widget.location.idLocation);
@@ -108,7 +143,7 @@ class _LocationCardState extends State<LocationCard> {
                     Expanded(
                       child: Column(
                         children: [
-                          Align(alignment: Alignment.topLeft, child: Text(titulo, style: boldStyle,),),
+                          Align(alignment: Alignment.topLeft, child: Text(titulo, style: LocationCard.boldStyle,),),
                           Align(alignment: Alignment.topLeft, child: Text(stringDisponibilidad)),
                         ],
                       ),
@@ -125,14 +160,14 @@ class _LocationCardState extends State<LocationCard> {
                       child: Column(
                         children: [
                           Align(alignment: Alignment.bottomLeft, child: Text(stringRangoTiempo,)),
-                          Align(alignment: Alignment.bottomLeft, child: Text(precioCompleto, style: boldStyle,)),
+                          Align(alignment: Alignment.bottomLeft, child: Text(precioCompleto, style: LocationCard.boldStyle,)),
                         ],
                       ),
                     ),
                     Row(
                       children: [
                         const Align(alignment: Alignment.bottomRight, child: Icon(Icons.star, color: Colors.black, size: 15,)),
-                        Align(alignment: Alignment.centerLeft, child: Text('$rating', style: ratingStyle,),),
+                        Align(alignment: Alignment.centerLeft, child: Text('$rating', style: LocationCard.ratingStyle,),),
                       ],
                     ),
                   ],

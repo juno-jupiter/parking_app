@@ -18,7 +18,7 @@ String getTimeRangeString(MyAppState appState, {splitTimeDay=true}) {
   String strDiaDesde = formatDate(fechaHoraDesde, appState.languageTag);
   String strHoraHasta = DateFormat('jm', appState.languageTag).format(fechaHoraHasta);
   String strDiaHasta = formatDate(fechaHoraHasta, appState.languageTag);
-  String splitter = splitTimeDay ? '\n' : '';
+  String splitter = splitTimeDay ? '\n' : ' ';
   if (fechaHoraDesde.day != fechaHoraHasta.day) {
     return '$strDiaDesde - $strDiaHasta$splitter$strHoraDesde - $strHoraHasta';
   }

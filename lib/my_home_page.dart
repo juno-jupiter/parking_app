@@ -28,13 +28,13 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState(){
     super.initState();
     initializeDateFormatting();
-    Future.delayed(Duration.zero, () async {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        List<Location> newLocs = await appState!.getLocationList();
-        setState(() {locationList = newLocs;});
-        appState?.reloadCallBack = reloadSearch;
-      });
+    //Future.delayed(Duration.zero, () async {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      List<Location> newLocs = await appState!.getLocationList();
+      setState(() {locationList = newLocs;});
+      appState?.reloadCallBack = reloadSearch;
     });
+    //});
 
   }
 

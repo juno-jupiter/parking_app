@@ -50,7 +50,8 @@ class MyAppState extends ChangeNotifier {
 
   Future<void> resetSearchFilters() async {
     searchFilters = SearchFilters(DateTime.now(), DateTime.now().add(const Duration(hours: 1)));
-    return setSearchFilters(searchFilters);
+    await setSearchFilters(searchFilters);
+    await toggleSearch();
   }
 
   Future<void> toggleSearch() async {

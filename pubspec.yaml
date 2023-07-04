@@ -18,6 +18,7 @@ dependencies:
   intl: ^0.18.1
   sqflite: ^2.2.8+4
   path: ^1.8.3
+  flutter_time_picker_spinner: ^2.0.0
 
 dev_dependencies:
   flutter_test:
