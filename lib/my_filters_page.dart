@@ -24,18 +24,10 @@ class MyFiltersPage extends StatefulWidget {
 
 class _MyFiltersPageState extends State<MyFiltersPage> {
   static const double iconSize = 30.0;
-  static const List<String> listaIdiomas = ['español', 'inglés', 'portugués', 'francés', 'alemán', 'japonés', 'italiano', 'ruso', 'chino (simplificado)', 'árabe'];
-  static const List<String> listaOpcionesReservacion = ['Reserva inmediata', 'Llegada autónoma', 'Acceso sin escaleras'];
-  static const List<String> listaSubtitulosOpcionesReservacion = [
-    'Reserva sin esperar a que responda el anfitrión',
-    'Fácil acceso a la propiedad al llegar',
-    'Se puede acceder al estacionamientos sin tener que subir o bajar escaleras'
-  ];
-
   bool initialSearch = true;
   RangeValues rangoPrecios = const RangeValues(0, 100);
-  List<bool> idiomasElegidos = List<bool>.filled(listaIdiomas.length, false);
-  List<bool> opcionesReservacionElegidas = List<bool>.filled(listaOpcionesReservacion.length, false);
+  List<bool> idiomasElegidos = List<bool>.filled(IdiomaPersona.listaIdiomas.length, false);
+  List<bool> opcionesReservacionElegidas = List<bool>.filled(Location.listaOpcionesReservacion.length, false);
   int numeroEstacionamientos = 0;
   List<bool> tipoPropiedadIsSelected = [true, false, false];
   List<bool> tipoEstacionamientoIsSelected = [true, false, false];
@@ -98,7 +90,7 @@ class _MyFiltersPageState extends State<MyFiltersPage> {
     DateTime timeFrom = DateTime(appState.fechaHoraDesde.year, appState.fechaHoraDesde.month, appState.fechaHoraDesde.day, appState.fechaHoraDesde.hour,  appState.fechaHoraDesde.minute);
     DateTime timeTo = DateTime(appState.fechaHoraHasta.year, appState.fechaHoraHasta.month, appState.fechaHoraHasta.day, appState.fechaHoraHasta.hour,  appState.fechaHoraHasta.minute);
 
-    if (!isDisposed) {
+    if ((!isDisposed)) {
       // Al final de este frame recarga la busqueda temporal de estacionamientos, para ofrecer  cuantos hay disponibles
       WidgetsBinding.instance.addPostFrameCallback((_) async {recalculateLocationList(database, timeFrom, timeTo);});
     }
@@ -108,10 +100,10 @@ class _MyFiltersPageState extends State<MyFiltersPage> {
     double bodyHeight = totalHeight - MySearchBar.height;
 
     List<Widget> listaIdiomasCheckbox = [];
-    int idiomasMostrados = mostrarMasIdiomas ? listaIdiomas.length : 3;
+    int idiomasMostrados = mostrarMasIdiomas ? IdiomaPersona.listaIdiomas.length : 3;
     for (var i = 0; i < idiomasMostrados; i++) {
       listaIdiomasCheckbox.add(CheckboxListTile(
-            title: Text(listaIdiomas[i]),
+            title: Text(IdiomaPersona.listaIdiomas[i]),
             value: idiomasElegidos[i],
             onChanged:(bool? value) {setState(() {
               idiomasElegidos[i] = value ?? false;
@@ -135,10 +127,10 @@ class _MyFiltersPageState extends State<MyFiltersPage> {
     );
 
     List<Widget> listaOpcionesReservacionSwitch = [];
-    for (var i = 0; i < listaOpcionesReservacion.length; i++) {
+    for (var i = 0; i < Location.listaOpcionesReservacion.length; i++) {
       listaOpcionesReservacionSwitch.add(SwitchListTile(
-          title: Text(listaOpcionesReservacion[i]),
-          subtitle: Text(listaSubtitulosOpcionesReservacion[i]),
+          title: Text(Location.listaOpcionesReservacion[i]),
+          subtitle: Text(Location.listaSubtitulosOpcionesReservacion[i]),
           value: opcionesReservacionElegidas[i],
           onChanged: (bool value) {setState(() {opcionesReservacionElegidas[i] = value;});},
         ));

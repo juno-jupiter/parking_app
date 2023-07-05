@@ -123,7 +123,7 @@ class MyMarkerLayer extends StatelessWidget {
 
     latitud = location.lat;
     longitud = location.lng;
-    double precioTotal = location.precioTotal;
+    double precioTotal = location.precioMinimo;
     markerString = '\$$precioTotal';
 
     isSelected = appState.selectedLocation?.idLocation == location.idLocation;

@@ -2,11 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:parking_app/table_entities.dart';
 
+class NavigationPageIndex {
+  static const main = 0;
+  static const favorites = 1;
+  static const scheduled = 2;
+  static const messages = 3;
+  static const account = 4;
+}
+
 class MyAppState extends ChangeNotifier {
   final Database database;
   MyAppState({required this.database,});
-
   String moneda = 'CLP';
+  String? numeroTelefonico;
 
   Location? selectedLocation;
   Location? openedLocationPage;
@@ -14,6 +22,7 @@ class MyAppState extends ChangeNotifier {
   String languageTag = 'es-ES';
   bool isListView = true;
   bool isFirstSearch = true;
+  int selectedIndex = 0;
 
   List<int> favLocations = [];
 
@@ -29,6 +38,15 @@ class MyAppState extends ChangeNotifier {
   DateTime fechaHoraHasta = DateTime.now().add(const Duration(hours: 1));
 
   Function? reloadCallBack;
+
+  void selectNavigationIndex(int index) {
+    selectedIndex = index;
+    notifyListeners();
+  }
+
+  void setReloadCallBack(Function? reloadFunc) {
+    reloadCallBack = reloadFunc;
+  }
 
   Future<List<Location>> getLocationList({SearchFilters? filters}) async {
     if (filters == null) isFirstSearch = false;
@@ -56,6 +74,12 @@ class MyAppState extends ChangeNotifier {
 
   Future<void> toggleSearch() async {
     reloadCallBack!(this);
+    if (selectedLocation != null) {
+      List<Location> tempLocationList = await getLocationList();
+      if (!tempLocationList.contains(selectedLocation)) {
+        selectedLocation = null;
+      }
+    }
     notifyListeners();
   }
 
@@ -189,6 +213,18 @@ class SearchFilters {
         }
       }
     }
+
+    // Agrega anfitriones a las propiedas
+    final List<Map> mapsAnfitriones = await database.query('anfitriones');
+    Map<int, Anfitrion> anfitrionIds = {};
+    for (var map in mapsAnfitriones) {
+      Anfitrion newAnfitrion = Anfitrion.fromMap(map);
+      anfitrionIds[newAnfitrion.idAnfitrion] = newAnfitrion;
+    }
+    for (var location in returnList) {
+      location.anfitrion = anfitrionIds.containsKey(location.anfitrionId) ? anfitrionIds[location.anfitrionId] : null;
+    }
+
     return returnList;
   }
 

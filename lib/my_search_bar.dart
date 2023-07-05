@@ -6,7 +6,7 @@ import 'package:parking_app/my_filters_page.dart';
 
 
 class MySearchBar extends StatelessWidget {
-  static const double height = 60.0;
+  static const double height = 70.0;
   static const double topMargin = height * 0.75;
   const MySearchBar({super.key});
 

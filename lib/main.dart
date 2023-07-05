@@ -23,15 +23,17 @@ Future<void> main() async {
   );
   await Location(
     1, -33.45260687351389, -70.59197637461642, 'Inacap Ñuñoa (Ex - Pérez Rosales)',
-    4.5, 'Brown Norte', '290', 'Ñuñoa', 'edificio', 1, 'Universidad', 1, 1, 0,
+    4.5, 'Brown Norte', '290', 'Ñuñoa', 'edificio', 1, 'Universidad', 0, 1, 0,
   ).insert(database);
   await Location(
     2, -33.45586944527495, -70.59375821933992, 'Plaza Ñuñoa',
-    4.5, 'Manuel de Salas', '71', 'Ñuñoa', 'edificio', 1, 'Plaza frente a la municipalidad', 1, 1, 1,
+    4.5, 'Manuel de Salas', '71', 'Ñuñoa', 'edificio', 2, 'Plaza frente a la municipalidad', 1, 1, 1,
   ).insert(database);
-  await Estacionamiento(1, 1, 'Estacionamiento #1', 1000.0, 4.5, '', 'auto').insert(database);
-  await Estacionamiento(2, 1, 'Estacionamiento #2 moto', 600.0, 3.85, '', 'moto').insert(database);
+  await Estacionamiento(1, 1, 'Estacionamiento subterráneo', 1000.0, 4.5, '', 'auto').insert(database);
+  await Estacionamiento(2, 1, 'Estacionamiento exterior', 700.0, 3.3, '', 'auto').insert(database);
   await Estacionamiento(3, 2, 'Estacionamiento #1', 800.0, 4.2, '', 'auto').insert(database);
+  await Estacionamiento(4, 2, 'Estacionamiento #2', 600.0, 3.85, '', 'moto').insert(database);
+  await Estacionamiento(5, 3, 'Estacionamiento #3', 600.0, 3.65, '', 'moto').insert(database);
   await Anfitrion(1, 3.2, "Inacap Ñuñoa", 'Universidad').insert(database);
   await Anfitrion(2, 4.6, "Municipalidad Ñuñoa", 'Cuenta oficial').insert(database);
   runApp(MyApp(database: database,));

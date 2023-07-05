@@ -21,53 +21,56 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<Location> locationList = [];
-  var selectedIndex = 0;
+  //var selectedIndex = 0;
   MyAppState? appState;
 
   @override
   void initState(){
     super.initState();
     initializeDateFormatting();
-    //Future.delayed(Duration.zero, () async {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       List<Location> newLocs = await appState!.getLocationList();
       setState(() {locationList = newLocs;});
-      appState?.reloadCallBack = reloadSearch;
+      appState?.setReloadCallBack(reloadSearch);
+      appState = null;
     });
-    //});
-
   }
 
   Future<void> reloadSearch(MyAppState newAppState) async {
     appState = newAppState;
     List<Location> foundList = await appState!.getLocationList();
     setState(() {locationList = foundList;});
+    appState = null;
   }
 
   @override
   Widget build(BuildContext context) {
     appState = Provider.of<MyAppState>(context, listen: true);
-    if (appState != null) appState?.reloadCallBack = reloadSearch;
+    int selectedIndex = 0;
+    if (appState != null) {
+      appState!.setReloadCallBack(reloadSearch);
+      selectedIndex = appState!.selectedIndex;
+    }
     Widget page;  // Elige ventana
     String appBarTitle = '';
 
     switch (selectedIndex) {
-      case 0:
+      case NavigationPageIndex.main:
         page = (appState!.isListView) ? MyListViewPage(locationList) : MyMapPage(locationList);
         break;
-      case 1:
+      case NavigationPageIndex.favorites:
         page = const MyFavoritesPage();
         appBarTitle = 'Favoritos';
         break;
-      case 2:
+      case NavigationPageIndex.scheduled:
         page = const MyScheduledPage();
         appBarTitle = 'Reservas';
         break;
-      case 3:
+      case NavigationPageIndex.messages:
         page = const MyMessagesPage();
         appBarTitle = 'Mensajes';
         break;
-      case 4:
+      case NavigationPageIndex.account:
         page = const MyAccountPage();
         appBarTitle = 'Perfil';
         break;
@@ -104,9 +107,11 @@ class _MyHomePageState extends State<MyHomePage> {
       ],
       currentIndex: selectedIndex,
       onTap: (value) {
-        setState(() {
-          selectedIndex = value;
-        });
+        // setState(() {
+        //   selectedIndex = value;
+        // }
+        // );
+        if (appState != null) appState!.selectNavigationIndex(value);
       },
     );
 

@@ -26,6 +26,13 @@ String getTimeRangeString(MyAppState appState, {splitTimeDay=true}) {
 }
 
 class Location {
+  static const List<String> listaOpcionesReservacion = ['Reserva inmediata', 'Llegada autónoma', 'Acceso sin escaleras'];
+  static const List<String> listaSubtitulosOpcionesReservacion = [
+    'Reserva sin esperar a que responda el anfitrión',
+    'Fácil acceso a la propiedad al llegar',
+    'Se puede acceder al estacionamientos sin tener que subir o bajar escaleras'
+  ];
+
   final int idLocation;
   final double lat;
   final double lng;
@@ -40,7 +47,8 @@ class Location {
   final int inmediata;
   final int autonoma;
   final int acceso;
-  double precioTotal = 0.0;
+  Anfitrion? anfitrion;
+  double precioMinimo = 0.0;
   List<Estacionamiento> estacionamientosLista = [];
 
   Location(this.idLocation, this.lat, this.lng, this.tituloLocation, this.ratingLocation, this.calle, this.numero,
@@ -60,7 +68,7 @@ class Location {
       parking.precioTotal = parking.getTotalCost(durationMinutes);
       if (parking.precioTotal < precioMenor) {precioMenor = parking.precioTotal;}
     }
-    precioTotal = precioMenor;
+    precioMinimo = precioMenor;
   }
 
   Future<void> insert(Database database) async {await database.insert('locations', toMap(), conflictAlgorithm: ConflictAlgorithm.replace,);}
@@ -219,6 +227,7 @@ class Anfitrion {
 }
 
 class IdiomaPersona {
+  static const List<String> listaIdiomas = ['español', 'inglés', 'portugués', 'francés', 'alemán', 'japonés', 'italiano', 'ruso', 'chino (simplificado)', 'árabe'];
   final int idIdioma;
   final int personaId;
   final int esAnfitrion;
