@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:parking_app/my_filters_page.dart';
-import 'package:parking_app/my_search_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:parking_app/table_entities.dart';
 import 'package:parking_app/my_app_state.dart';
 import 'package:parking_app/my_reservation_page.dart';
+import 'package:parking_app/my_filters_page.dart';
+import 'package:parking_app/my_search_bar.dart';
+
+import 'my_favorites_page.dart';
 
 Widget ratingObjeto(double rating) {
   return ConstrainedBox(
@@ -31,8 +33,16 @@ class LocationPage extends StatefulWidget {
 }
 
 class _LocationPageState extends State<LocationPage> {
+  final myTextController = TextEditingController();
   List<bool> estacionamientosIsSelected = [];
   double precioTotal = 0.0;
+
+  @override
+  void dispose() {
+    // Clean up the controller when the widget is disposed.
+    myTextController.dispose();
+    super.dispose();
+  }
 
   toggleEstacionamientoSelected(bool value, int index) {
     if (estacionamientosIsSelected.isEmpty) {
@@ -63,7 +73,8 @@ class _LocationPageState extends State<LocationPage> {
   Widget build(BuildContext context) {
     final appState = Provider.of<MyAppState>(context, listen: true);
 
-    bool isFav = appState.favLocations.contains(widget.location.idLocation);
+    //bool isFav = appState.favLocations.contains(widget.location.idLocation);
+    bool isFav = (appState.perfilUsuario != null) ? (appState.perfilUsuario!.tieneLocationFavorito(widget.location) >= 0) : false;
     Image? cardImage;
     if (widget.location.idLocation > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
     int estacionamientos = widget.location.estacionamientosLista.length;
@@ -93,7 +104,24 @@ class _LocationPageState extends State<LocationPage> {
         ],
       ),
       actions: [
-        IconButton(onPressed: () {appState.toggleFavoriteLocation(widget.location);}, icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),)
+        IconButton(onPressed: () async {
+          int idColCreada = await appState.toggleFavoriteLocation(widget.location);
+          if (idColCreada > 0) {
+            ColeccionFavoritos? colCreada = await ColeccionFavoritos.getColeccionFavoritos(appState.database, idColCreada);
+            final snackBar = SnackBar(
+              content: Text('Agregada a ${colCreada?.nombreColeccionFavoritos}'),
+              action: SnackBarAction(
+                label: 'Cambiar',
+                onPressed: () async {
+                  appState.openSelectColeccion();
+                },
+              ),
+            );
+            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+          }
+          },
+          icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
+        )
       ],
     );
 
@@ -120,6 +148,7 @@ class _LocationPageState extends State<LocationPage> {
       ),
     );
 
+    String stringTipoLoc = '${widget.location.tipoLocation.substring(0, 1).toUpperCase()}${widget.location.tipoLocation.substring(1, widget.location.tipoLocation.length)}';
     List<Widget> listaCaracteristicas = [
       Padding(
           padding: const EdgeInsets.all(4.0),
@@ -128,7 +157,7 @@ class _LocationPageState extends State<LocationPage> {
               child: SizedBox(
                 width: double.infinity,
                 child: ListTile(
-                  title: Text('Tipo de propiedad: ${widget.location.tipoLocation}', style: MyFiltersPage.inputDecoratorLabelStyle),
+                  title: Text('Tipo de propiedad: $stringTipoLoc', style: MyFiltersPage.inputDecoratorLabelStyle),
                 ),
               )
           )
@@ -364,30 +393,152 @@ class _LocationPageState extends State<LocationPage> {
       ),
     );
 
-    return Scaffold(
-      appBar: appBar,
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              color: Colors.white,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ListView(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.all(8),
-                      children: listViewChildren,
-                    ),
-                  ),
-                ],
+    List<Widget> stackChildren = [
+      Scaffold(
+        appBar: appBar,
+        body: Column(
+          children: [
+            Expanded(
+              child: Container(
+                color: Colors.white,
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(8),
+                  children: listViewChildren,
+                ),
               ),
             ),
-          ),
-          bottomBar,
-        ],
+            bottomBar,
+          ],
+        )
       )
-    );
+    ];
+    double totalHeight = MediaQuery.of(context).size.height;
+    if (appState.isCreatingColeccionFavorito) {
+      stackChildren.add(
+        Stack(
+          children: [
+            SizedBox(
+              height: totalHeight,
+              child: Material(
+                color: Colors.black87,
+                child: InkWell(onTap: (){
+                  myTextController.text = '';
+                  appState.closeCreatingColeccion();
+                },),
+              ),
+            ),
+            Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: totalHeight * 0.35),
+                child: SizedBox(
+                  height: totalHeight * 0.35,
+                  child: Card(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30),),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: IconButton(
+                            onPressed: () {
+                              myTextController.text = '';
+                              appState.closeCreatingColeccion();
+                            },
+                            icon: const Icon(Icons.close),
+                          ),
+                          title: const Text('Ponle nombre a esta lista de favoritos', style: LocationCard.boldStyle,),
+                        ),
+                        const Divider(),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Spacer(flex: 1),
+                              Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: TextField(
+                                  controller: myTextController,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                    labelText: 'Nombre de la lista de favoritos',
+                                    hintText: 'Nombre de la lista de favoritos',
+                                    helperText: 'Máximo 50 caracteres',
+                                  ),
+                                ),
+                              ),
+                              const Spacer(flex: 1),
+                            ],
+                          ),
+                        ),
+                        const Divider(),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ElevatedButton(
+                              onPressed: () async {
+                                int idColCreada = await appState.crearColeccion(myTextController.text, widget.location);
+                                if (idColCreada > 0) {
+                                  ColeccionFavoritos? colCreada = await ColeccionFavoritos.getColeccionFavoritos(appState.database, idColCreada);
+                                  final snackBar = SnackBar(
+                                    content: Text('Agregada a ${colCreada?.nombreColeccionFavoritos}'),
+                                    action: SnackBarAction(
+                                      label: 'Cambiar',
+                                      onPressed: () async {
+                                        appState.openSelectColeccion();
+                                      },
+                                    ),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                                }
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text('Crear', style: TextStyle(color: Colors.white),),
+                              )
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+          ],
+        ),
+      );
+    } else if (appState.isSelectingColeccionFavorito) {
+      List<ColeccionFavoritos> bottomSheetList = (appState.perfilUsuario != null) ? appState.perfilUsuario!.listadoColeccionesFavoritos : [];
+      stackChildren.add(
+        Stack(
+          children: [
+            SizedBox(
+              height: totalHeight,
+              child: Material(
+                color: Colors.black87,
+                child: InkWell(onTap: (){
+                  myTextController.text = '';
+                  appState.closeCreatingColeccion();
+                },),
+              ),
+            ),
+            Column(
+              children: [
+                Expanded(child: Container(child: null)),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: totalHeight - MySearchBar.height * 2.0),
+                    child: SizedBox(
+                      height: totalHeight - MySearchBar.height * 2.0,
+                      child: BottomSheetColeccionFavoritos(listadoColeccionesFavoritos: bottomSheetList, location: widget.location,),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      );
+    }
+
+    return Stack(children: stackChildren,);
   }
 }
 
@@ -479,8 +630,9 @@ class LocationCard extends StatefulWidget {
 class _LocationCardState extends State<LocationCard> {
   Card getLocationCard(BuildContext context, MyAppState appState) {
     widget.location.recalculateTotalCost(appState.getTotalDuration());
+    //bool isFav = appState.favLocations.contains(widget.location.idLocation);
+    bool isFav = (appState.perfilUsuario != null) ? (appState.perfilUsuario!.tieneLocationFavorito(widget.location) >= 0) : false;
 
-    bool isFav = appState.favLocations.contains(widget.location.idLocation);
     Image? cardImage;
     if (widget.location.idLocation > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
     int estacionamientos = widget.location.estacionamientosLista.length;
@@ -499,7 +651,7 @@ class _LocationCardState extends State<LocationCard> {
         splashColor: Theme.of(context).primaryColor.withAlpha(30),
         onTap: () {
           appState.toggleLocationPage(widget.location);
-          Navigator.of(context).push(MaterialPageRoute(builder: (context)=> LocationPage(widget.location,)));
+          Navigator.of(context).push(MaterialPageRoute(builder: (context)=> LocationPage(widget.location,))).then((value) => appState.closeCreatingColeccion());
           },
         child: Row(
           children: [
@@ -520,7 +672,9 @@ class _LocationCardState extends State<LocationCard> {
                       ),
                     ),
                     IconButton(
-                      onPressed: () {appState.toggleFavoriteLocation(widget.location);},
+                      onPressed: () async {
+                        appState.toggleFavoriteLocation(widget.location);
+                        },
                       icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
                     ),
                   ],

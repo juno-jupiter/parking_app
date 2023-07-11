@@ -11,8 +11,10 @@ class NavigationPageIndex {
 }
 
 class MyAppState extends ChangeNotifier {
+  final idPerfil = 1;
   final Database database;
   MyAppState({required this.database,});
+  Perfil? perfilUsuario;
   String moneda = 'CLP';
   String? numeroTelefonico;
 
@@ -22,9 +24,9 @@ class MyAppState extends ChangeNotifier {
   String languageTag = 'es-ES';
   bool isListView = true;
   bool isFirstSearch = true;
+  bool isCreatingColeccionFavorito = false;
+  bool isSelectingColeccionFavorito = false;
   int selectedIndex = 0;
-
-  List<int> favLocations = [];
 
   SearchFilters searchFilters = SearchFilters(DateTime.now(), DateTime.now().add(const Duration(hours: 1)));
 
@@ -39,16 +41,23 @@ class MyAppState extends ChangeNotifier {
 
   Function? reloadCallBack;
 
+  Future<void> initPerfilUsuario() async {
+    perfilUsuario = await Perfil.getPerfil(database, idPerfil);
+    if (perfilUsuario != null) perfilUsuario!.listadoColeccionesFavoritos = await perfilUsuario!.getColeccionesFavoritos(database);
+    notifyListeners();
+  }
+
   void selectNavigationIndex(int index) {
     selectedIndex = index;
     notifyListeners();
   }
 
-  void setReloadCallBack(Function? reloadFunc) {
-    reloadCallBack = reloadFunc;
-  }
+  void setReloadCallBack(Function? reloadFunc) {reloadCallBack = reloadFunc;}
 
   Future<List<Location>> getLocationList({SearchFilters? filters}) async {
+    if (isFirstSearch) {
+      initPerfilUsuario();
+    }
     if (filters == null) isFirstSearch = false;
     filters = (filters == null) ? searchFilters : filters;
     return filters.getLocationList(database);
@@ -116,9 +125,69 @@ class MyAppState extends ChangeNotifier {
     return anfitriones.firstWhere((element) => (element['id'] == idAnfitrion), orElse: () => {});
   }
 
-  void toggleFavoriteLocation(Location location) async {
-    if (favLocations.contains(location.idLocation)) {favLocations.remove(location.idLocation);} else {favLocations.add(location.idLocation);}
+  void closeCreatingColeccion() {
+    isCreatingColeccionFavorito = false;
+    isSelectingColeccionFavorito = false;
     notifyListeners();
+  }
+
+  void openCreatingColeccion() {
+    isCreatingColeccionFavorito = true;
+    isSelectingColeccionFavorito = false;
+    notifyListeners();
+  }
+
+  Future<int> toggleFavoriteLocation(Location location, {int idColeccion = -1}) async {
+    if (perfilUsuario == null) await initPerfilUsuario();
+    if (isCreatingColeccionFavorito) return -1;
+    if (perfilUsuario != null) {
+      int tieneLocation = perfilUsuario!.tieneLocationFavorito(location);
+      if (tieneLocation >= 0) {
+        // Tiene el favorito, lo elimina de la coleccion y actualiza las clases
+        ColeccionFavoritos coleccion = perfilUsuario!.listadoColeccionesFavoritos[tieneLocation];
+        for (var favorito in coleccion.favoritosLista) {if (favorito.locationId == location.idLocation) await favorito.delete(database);}
+        await initPerfilUsuario();
+      } else {
+        // No tiene el favorito, se tiene que agregar
+        // Si tienes colecciones, se agrega a la ultima coleccion creada/modificada
+        if (perfilUsuario!.ultimaColeccionGuardadaId > 0) {
+          await Favorito(-1, perfilUsuario!.ultimaColeccionGuardadaId, location.idLocation).insert(database);
+          await initPerfilUsuario();
+          return perfilUsuario!.ultimaColeccionGuardadaId;
+        } else {
+          isCreatingColeccionFavorito = true;
+          isSelectingColeccionFavorito = false;
+        }
+      }
+    }
+    notifyListeners();
+    return -1;
+    //if (favLocations.contains(location.idLocation)) {favLocations.remove(location.idLocation);} else {favLocations.add(location.idLocation);}
+  }
+
+  Future<int> crearColeccion(String nombreColeccion, Location location) async {
+    if (perfilUsuario == null) await initPerfilUsuario();
+    if (!isCreatingColeccionFavorito) return -1;
+    if (perfilUsuario != null) {
+      int idColeccion = await ColeccionFavoritos(-1, perfilUsuario!.idPerfil, nombreColeccion).insert(database);
+      await Perfil(perfilUsuario!.idPerfil, perfilUsuario!.moneda, perfilUsuario!.numeroTelefonico, idColeccion).insert(database);
+      isCreatingColeccionFavorito = false;
+      await initPerfilUsuario();
+      toggleFavoriteLocation(location);
+      return idColeccion;
+    }
+    return -1;
+  }
+
+  Future<int> openSelectColeccion() async {
+    if (perfilUsuario == null) await initPerfilUsuario();
+    if (isSelectingColeccionFavorito) return -1;
+    if (perfilUsuario != null) {
+      isSelectingColeccionFavorito = true;
+      isCreatingColeccionFavorito = false;
+    }
+    notifyListeners();
+    return -1;
   }
 
   double getTotalDuration() {return searchFilters.fechaHoraHasta.difference(searchFilters.fechaHoraDesde).inMinutes.toDouble();}

@@ -21,7 +21,6 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<Location> locationList = [];
-  //var selectedIndex = 0;
   MyAppState? appState;
 
   @override
@@ -107,10 +106,6 @@ class _MyHomePageState extends State<MyHomePage> {
       ],
       currentIndex: selectedIndex,
       onTap: (value) {
-        // setState(() {
-        //   selectedIndex = value;
-        // }
-        // );
         if (appState != null) appState!.selectNavigationIndex(value);
       },
     );

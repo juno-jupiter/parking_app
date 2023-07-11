@@ -267,3 +267,164 @@ class IdiomaPersona {
     ''',);
   }
 }
+
+class Favorito {
+  final int idFavorito;
+  final int coleccionFavoritosId;
+  final int locationId;
+  Favorito(this.idFavorito, this.coleccionFavoritosId, this.locationId);
+
+  Map<String, dynamic> toMap() {return {'idFavorito': idFavorito, 'coleccionFavoritosId': coleccionFavoritosId,'locationId': locationId, };}
+  Future<int> insert(Database database) async {
+    if (idFavorito < 0) {
+      // Self increment
+      final List<Map> maps = await database.query('favoritos', where: 'idFavorito=(SELECT max(idFavorito) from favoritos)');
+      int lastId = 0;
+      if (maps.isNotEmpty) lastId = int.parse(maps.last['idFavorito'].toString());
+      return Favorito(lastId + 1, coleccionFavoritosId, locationId).insert(database);
+    }
+    await database.insert('favoritos', toMap(), conflictAlgorithm: ConflictAlgorithm.replace,);
+    return idFavorito;
+  }
+  Future<void> delete(Database database) async {await database.delete('favoritos', where: 'idFavorito = ?', whereArgs: [idFavorito],);}
+
+  static Favorito fromMap(Map map) {
+    return Favorito(int.parse(map['idFavorito'].toString()), int.parse(map['coleccionFavoritosId'].toString()), int.parse(map['locationId'].toString()),);
+  }
+
+  static Future<Favorito?> getFavorito(Database database, int idFavorito) async {
+    final List<Map> maps = await database.query('favoritos', where: 'idFavorito = ?', whereArgs: [idFavorito]);
+    if (maps.isNotEmpty) {return Favorito.fromMap(maps.first);}
+    return null;
+  }
+
+  static Future<List<Favorito>> getFavoritosList(Database database) async {
+    final List<Map> maps = await database.query('favoritos');
+    List<Favorito> favoritosList = [];
+    for (var map in maps) {favoritosList.add(Favorito.fromMap(map));}
+    return favoritosList;
+  }
+
+  static Future<void> createTable(database) async {
+    return database.execute('''
+    create table favoritos(idFavorito integer primary key, coleccionFavoritosId integer, locationId integer)
+    ''',);
+  }
+}
+
+class ColeccionFavoritos {
+  final int idColeccionFavoritos;
+  final int perfilId;
+  final String nombreColeccionFavoritos;
+  List<Favorito> favoritosLista = [];
+
+  ColeccionFavoritos(this.idColeccionFavoritos, this.perfilId, this.nombreColeccionFavoritos,);
+
+  Map<String, dynamic> toMap() {
+    return {'idColeccionFavoritos': idColeccionFavoritos, 'perfilId': perfilId, 'nombreColeccionFavoritos': nombreColeccionFavoritos,};
+  }
+  Future<int> insert(Database database) async {
+    if (idColeccionFavoritos < 0) {
+      // Self increment
+      final List<Map> maps = await database.query('colecciones_favoritos', where: 'idColeccionFavoritos=(SELECT max(idColeccionFavoritos) from colecciones_favoritos)',);
+      int lastId = 0;
+      if (maps.isNotEmpty) lastId = int.parse(maps.last['idColeccionFavoritos'].toString());
+      return ColeccionFavoritos(lastId + 1, perfilId, nombreColeccionFavoritos).insert(database);
+    }
+    await database.insert('colecciones_favoritos', toMap(), conflictAlgorithm: ConflictAlgorithm.replace,);
+    return idColeccionFavoritos;
+  }
+  Future<void> delete(Database database) async {await database.delete('colecciones_favoritos', where: 'idColeccionFavoritos = ?', whereArgs: [idColeccionFavoritos],);}
+
+  static ColeccionFavoritos fromMap(Map map) {
+    return ColeccionFavoritos(int.parse(map['idColeccionFavoritos'].toString()), int.parse(map['perfilId'].toString()), map['nombreColeccionFavoritos'],);
+  }
+
+  Future<List<Favorito>> getFavoritos(Database database) async {
+    List<Favorito> nuevoListado = [];
+    final List<Map> maps = await database.query('favoritos', where: 'coleccionFavoritosId = ?', whereArgs: [idColeccionFavoritos]);
+    for (var map in maps) {
+      nuevoListado.add(Favorito.fromMap(map));
+    }
+    return nuevoListado;
+  }
+
+  static Future<ColeccionFavoritos?> getColeccionFavoritos(Database database, int idColeccionFavoritos) async {
+    final List<Map> maps = await database.query('colecciones_favoritos', where: 'idColeccionFavoritos = ?', whereArgs: [idColeccionFavoritos]);
+    if (maps.isNotEmpty) {return ColeccionFavoritos.fromMap(maps.first);}
+    return null;
+  }
+
+  static Future<List<ColeccionFavoritos>> getColeccionFavoritosList(Database database) async {
+    final List<Map> maps = await database.query('colecciones_favoritos');
+    List<ColeccionFavoritos> coleccionesFavoritosList = [];
+    for (var map in maps) {coleccionesFavoritosList.add(ColeccionFavoritos.fromMap(map));}
+    return coleccionesFavoritosList;
+  }
+
+  static Future<void> createTable(database) async {
+    return database.execute('''
+    create table colecciones_favoritos(idColeccionFavoritos integer primary key, perfilId integer, nombreColeccionFavoritos text)
+    ''',);
+  }
+}
+
+class Perfil {
+  static const List<String> listaMonedas = ['CLP', 'USD',];
+  final int idPerfil;
+  final String moneda;
+  final String numeroTelefonico;
+  final int ultimaColeccionGuardadaId;
+  List<ColeccionFavoritos> listadoColeccionesFavoritos = [];
+
+  Perfil(this.idPerfil, this.moneda, this.numeroTelefonico, this.ultimaColeccionGuardadaId);
+
+  Map<String, dynamic> toMap() {
+    return {'idPerfil': idPerfil, 'moneda': moneda, 'numeroTelefonico': numeroTelefonico, 'ultimaColeccionGuardadaId': ultimaColeccionGuardadaId,};
+  }
+  Future<void> insert(Database database) async {await database.insert('perfiles', toMap(), conflictAlgorithm: ConflictAlgorithm.replace,);}
+  Future<void> delete(Database database) async {await database.delete('perfiles', where: 'idPerfil = ?', whereArgs: [idPerfil],);}
+
+  Future<List<ColeccionFavoritos>> getColeccionesFavoritos(Database database) async {
+    List<ColeccionFavoritos> nuevoListado = [];
+    final List<Map> maps = await database.query('colecciones_favoritos', where: 'perfilId = ?', whereArgs: [idPerfil]);
+    for (var map in maps) {
+      ColeccionFavoritos coleccion = ColeccionFavoritos.fromMap(map);
+      coleccion.favoritosLista = await coleccion.getFavoritos(database);
+      nuevoListado.add(coleccion);
+    }
+    return nuevoListado;
+  }
+
+  int tieneLocationFavorito(Location location) {
+    int i = 0;
+    for (var coleccion in listadoColeccionesFavoritos) {
+      if (coleccion.favoritosLista.any((item) => item.locationId == location.idLocation)) return i;
+      i++;
+    }
+    return -1;
+  }
+
+  static Perfil fromMap(Map map) {
+    return Perfil(int.parse(map['idPerfil'].toString()), map['moneda'], map['numeroTelefonico'], int.parse(map['ultimaColeccionGuardadaId'].toString()),);
+  }
+
+  static Future<Perfil?> getPerfil(Database database, int idPerfil) async {
+    final List<Map> maps = await database.query('perfiles', where: 'idPerfil = ?', whereArgs: [idPerfil]);
+    if (maps.isNotEmpty) {return Perfil.fromMap(maps.first);}
+    return null;
+  }
+
+  static Future<List<Perfil>> getPerfilList(Database database) async {
+    final List<Map> maps = await database.query('perfiles');
+    List<Perfil> perfilesList = [];
+    for (var map in maps) {perfilesList.add(Perfil.fromMap(map));}
+    return perfilesList;
+  }
+
+  static Future<void> createTable(database) async {
+    return database.execute('''
+    create table perfiles(idPerfil integer primary key, moneda text, numeroTelefonico text, ultimaColeccionGuardadaId integer)
+    ''',);
+  }
+}

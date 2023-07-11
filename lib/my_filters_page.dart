@@ -1,12 +1,11 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:parking_app/table_entities.dart';
 import 'package:parking_app/my_app_state.dart';
 import 'package:parking_app/my_search_bar.dart';
-import 'package:sqflite/sqflite.dart';
 
 class MyFiltersPage extends StatefulWidget {
   final SearchFilters searchFilters;

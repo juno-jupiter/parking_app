@@ -11,16 +11,20 @@ import 'package:parking_app/my_home_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Intl.systemLocale = await findSystemLocale();
-  //await deleteDatabase('parking.db');
+  await deleteDatabase('parking.db');
   final Database database = await openDatabase(
     join(await getDatabasesPath(), 'parking.db'), version: 1,
       onCreate: (database, version) async {
         await Location.createTable(database);
         await Estacionamiento.createTable(database);
+        await Perfil.createTable(database);
         await Anfitrion.createTable(database);
         await IdiomaPersona.createTable(database);
+        await ColeccionFavoritos.createTable(database);
+        await Favorito.createTable(database);
       }
   );
+  await Perfil(1, 'CLP', '', -1).insert(database);
   await Location(
     1, -33.45260687351389, -70.59197637461642, 'Inacap Ñuñoa (Ex - Pérez Rosales)',
     4.5, 'Brown Norte', '290', 'Ñuñoa', 'edificio', 1, 'Universidad', 0, 1, 0,

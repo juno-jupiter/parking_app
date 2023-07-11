@@ -14,7 +14,7 @@ class MySearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = Provider.of<MyAppState>(context, listen: true);
     MyFiltersPage filtersPage = MyFiltersPage(searchFilters: appState.searchFilters);
-    String stringRangoTiempo = getTimeRangeString(appState, splitTimeDay: false);
+    String stringRangoTiempo = getTimeRangeString(appState);
     SizedBox searchBarIcon({Alignment alignment = Alignment.center, IconData? icon, Color color = Colors.black, Color? borderColor, Function()? onTap}) {
       return SizedBox(
         width: 50,
