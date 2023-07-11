@@ -31,10 +31,6 @@ class _MyReservationPageState extends State<MyReservationPage> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<MyAppState>(context, listen: true);
-
-    //Image? cardImage;
-    //if (widget.location.idLocation > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
-
     Duration totalDuration = Duration(minutes: appState.getTotalDuration().toInt());
     int justDays = totalDuration.inDays;
     int justHours = totalDuration.inHours - (justDays * 24);
@@ -134,9 +130,11 @@ class _MyReservationPageState extends State<MyReservationPage> {
     ];
 
     List<Widget> detallePrecioEstacionamientos = [];
+    List<Estacionamiento> estacionamientosElegidos = [];
     int contadorEstacionamiento = 0;
     for (var estacionamiento in widget.location.estacionamientosLista) {
       if (widget.estacionamientosIsSelected[contadorEstacionamiento]) {
+        estacionamientosElegidos.add(estacionamiento);
         tarjetaEstacionamientos.add(
             Padding(
               padding: const EdgeInsets.all(4.0),
@@ -293,7 +291,7 @@ class _MyReservationPageState extends State<MyReservationPage> {
                   width: double.infinity,
                   child: ListTile(
                     title: const Text('Número telefónico', style: MyFiltersPage.inputDecoratorLabelStyle),
-                    subtitle: const Text('Agrega y confirma tu número de teléfono para recibir actualizaciones tu reserva'),
+                    subtitle: const Text('Agrega y confirma tu número de teléfono para recibir actualizaciones de tu reserva'),
                     trailing: SizedBox(
                       width: 100,
                       child: ElevatedButton(
@@ -344,8 +342,10 @@ class _MyReservationPageState extends State<MyReservationPage> {
       ),
     );
 
+    String estadoReserva = BoletaReserva.estadoActivo;
     Widget? widgetNoInmediata;
     if (widget.location.inmediata != 1) {
+      estadoReserva = BoletaReserva.estadoPendiente;
       widgetNoInmediata = const Padding(
         padding: EdgeInsets.all(4.0),
         child: Align(
@@ -397,10 +397,20 @@ class _MyReservationPageState extends State<MyReservationPage> {
                 width: 200,
                 height: MySearchBar.topMargin,
                 child: ElevatedButton(
-                  onPressed: isSelected ? () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
-                    appState.selectNavigationIndex(NavigationPageIndex.scheduled);
+                  onPressed: isSelected ? () async {
+                    String ok = await appState.crearReserva(appState.fechaHoraDesde, appState.fechaHoraHasta, estacionamientosElegidos, estadoReserva);
+                    if (ok == 'ok') {
+                      Navigator.popUntil(context, (route) => route.isFirst);
+                      appState.selectNavigationIndex(NavigationPageIndex.scheduled);
+                      // navegar a reserva creada
+                      print('reserva creada ${appState.ultimaReservaCreada?.idBoletaReserva}');
+                      await appState.initPerfilUsuario();
+                      if (appState.ultimaReservaCreada != null) {
+                        const snackBar = SnackBar(content: Text('Reserva solicitada'),);
+                        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                        Navigator.of(context).push(MaterialPageRoute(builder: (context)=> DetalleBoletaPage(appState.ultimaReservaCreada!)));
+                      }
+                    }
                   } : null,
                   child: const Padding(
                     padding: EdgeInsets.all(8.0),
@@ -432,4 +442,311 @@ class _MyReservationPageState extends State<MyReservationPage> {
         ),
     );
   }
+}
+
+
+class DetalleBoletaPage extends StatelessWidget {
+  static const strCodigo = 'XXXXXX';
+  final BoletaReserva boletaReserva;
+
+  const DetalleBoletaPage(this.boletaReserva, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    MyAppState appState = Provider.of<MyAppState>(context, listen: true);
+    boletaReserva.recalculateTotalCost();
+
+    AppBar appBar = AppBar(
+      leading: const BackButton(),
+      title: const Column(
+        children: [
+          Align(alignment: Alignment.centerLeft, child: Text('Detalle de la reserva')),
+        ],
+      ),
+    );
+
+    String direccionLocation = '';
+    String tipoLocation = 'Tipo propiedad:';
+    String fechaHoraDesde = '';
+    String fechaHoraHasta = '';
+    String todosLosEstacionamientos = '';
+    String nombreAnfitrion = '';
+
+    Duration totalDuration = Duration(minutes: boletaReserva.getTotalDuration().toInt());
+    int justDays = totalDuration.inDays;
+    int justHours = totalDuration.inHours - (justDays * 24);
+    int justMinutes = totalDuration.inMinutes - (justHours * 60);
+
+    List<Widget> detallePrecioEstacionamientos = [];
+
+    if (boletaReserva.location != null) {
+      if (boletaReserva.location!.anfitrion != null) nombreAnfitrion = boletaReserva.location!.anfitrion!.nombreAnfitrion;
+      direccionLocation = '${boletaReserva.location!.calle} ${boletaReserva.location!.numero}, ${boletaReserva.location!.comuna}';
+      String primereLetra = boletaReserva.location!.tipoLocation.substring(0, 1).toUpperCase();
+      String restoPalabra = boletaReserva.location!.tipoLocation.substring(1, boletaReserva.location!.tipoLocation.length);
+      tipoLocation = '$tipoLocation $primereLetra$restoPalabra';
+      if (boletaReserva.listaRangoFecha.isNotEmpty) {
+        fechaHoraDesde = '${formatDate(boletaReserva.listaRangoFecha.first.fechaHoraDesde, appState.languageTag)} de ${boletaReserva.listaRangoFecha.first.fechaHoraDesde.year}';
+        fechaHoraDesde = '$fechaHoraDesde\n${formatHora(boletaReserva.listaRangoFecha.first.fechaHoraDesde, appState.languageTag)}';
+        fechaHoraHasta = '${formatDate(boletaReserva.listaRangoFecha.last.fechaHoraHasta, appState.languageTag)} de ${boletaReserva.listaRangoFecha.last.fechaHoraHasta.year}';
+        fechaHoraHasta = '$fechaHoraHasta\n${formatHora(boletaReserva.listaRangoFecha.last.fechaHoraHasta, appState.languageTag)}';
+      }
+
+      String stringTiempoTotal = '';
+      if (justDays > 0) stringTiempoTotal = '$justDays dia${(justDays > 1) ? 's' : ''}';
+      if (justHours > 0) {
+        if (stringTiempoTotal.isNotEmpty && (justMinutes == 0)) {
+          stringTiempoTotal = '$stringTiempoTotal y $justHours hora${(justHours > 1) ? 's' : ''}';
+        } else if (stringTiempoTotal.isNotEmpty) {
+          stringTiempoTotal = '$stringTiempoTotal, $justHours hora${(justHours > 1) ? 's' : ''}';
+        } else {
+          stringTiempoTotal = '$justHours hora${(justHours > 1) ? 's' : ''}';
+        }
+      }
+      if (justMinutes > 0) {
+        if (stringTiempoTotal.isNotEmpty) {
+          stringTiempoTotal = '$stringTiempoTotal y';
+        } else {
+          stringTiempoTotal = '$stringTiempoTotal, $justMinutes minutos${(justMinutes > 1) ? 's' : ''}';
+        }
+      }
+
+      int contadorEstacionamiento = 0;
+      for (var rangoFecha in boletaReserva.listaRangoFecha) {
+        String agregarEstacionamiento = '';
+        if (rangoFecha.estacionamiento != null) {
+          if (contadorEstacionamiento == 0) {
+            agregarEstacionamiento = rangoFecha.estacionamiento!.nombreEstacionamiento;
+          } else {
+            agregarEstacionamiento = ', ${rangoFecha.estacionamiento!.nombreEstacionamiento}';
+          }
+          detallePrecioEstacionamientos.add(
+            Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Row(
+                children: [
+                  Expanded(child: Text('\$${rangoFecha.estacionamiento!.precio} ${appState.moneda} x $stringTiempoTotal')),
+                  Text('\$${rangoFecha.estacionamiento!.precioTotal} ${appState.moneda}'),
+                ],
+              ),
+            ),
+          );
+        }
+        todosLosEstacionamientos =  '$todosLosEstacionamientos$agregarEstacionamiento';
+        contadorEstacionamiento++;
+      }
+    }
+
+    TextStyle greyStyle = TextStyle(color: Colors.grey[800]);
+
+    Widget codigoConfirmacion = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: 'Código de confirmación', labelStyle: greyStyle),
+        child: const Padding(padding: EdgeInsets.all(8.0), child: Text(strCodigo, style: MyFiltersPage.inputDecoratorLabelStyle,),),
+      ),
+    );
+
+    Widget descripcionEstacionamiento1 = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: 'Tipo propiedad', labelStyle: greyStyle),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Align(alignment: Alignment.centerLeft, child: Text(tipoLocation, style: MyFiltersPage.boldStyle,)),
+        ),
+      ),
+    );
+
+    Widget descripcionEstacionamiento2 = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: 'Dirección estacionamiento', labelStyle: greyStyle),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Align(alignment: Alignment.centerLeft, child: Text(direccionLocation, style: MyFiltersPage.boldStyle,)),
+        ),
+      ),
+    );
+
+    Widget tituloLlegada = Column(
+      children: [
+        Padding(padding: const EdgeInsets.all(8.0), child: Text('Llegada', style: greyStyle,),),
+        Padding(padding: const EdgeInsets.all(8.0), child: Text(fechaHoraDesde, style: MyFiltersPage.boldStyle,),),
+      ],
+    );
+
+    Widget tituloSalida = Column(
+      children: [
+        Padding(padding: const EdgeInsets.all(8.0), child: Text('Salida', style: greyStyle,),),
+        Padding(padding: const EdgeInsets.all(8.0), child: Text(fechaHoraHasta, style: MyFiltersPage.boldStyle,),),
+      ],
+    );
+
+    Widget fechaReserva = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: 'Fechas', labelStyle: greyStyle),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Center(
+            child: Wrap(
+              children: [
+                tituloLlegada, const Padding(padding: EdgeInsets.all(8.0), child: Icon(Icons.navigate_next),), tituloSalida,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Widget listadoEstacionamientos = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: 'Estacionamientos reservados', labelStyle: greyStyle),
+        child: Padding(padding: const EdgeInsets.all(8.0), child: Text(todosLosEstacionamientos, style: MyFiltersPage.boldStyle,),),
+      ),
+    );
+    if (detallePrecioEstacionamientos.isNotEmpty) {
+      detallePrecioEstacionamientos.add(
+        Padding(padding: const EdgeInsets.all(4.0),
+          child: Row(children: [
+            const Expanded(child: Text('Subtotal', style: MyFiltersPage.boldStyle,)),
+            Text('\$${boletaReserva.precioTotalEstacionamientos} ${appState.moneda}', style: MyFiltersPage.boldStyle,),
+          ],),
+        ),
+      );
+      detallePrecioEstacionamientos.add(
+        Padding(padding: const EdgeInsets.all(4.0), child: Row(children: [
+          const Expanded(child: Text('Tarifa por servicio')),
+          Text('\$${boletaReserva.cargoServicio} ${appState.moneda}'),
+        ],),),
+      );
+      detallePrecioEstacionamientos.add(const Divider(color: Colors.black38,));
+      detallePrecioEstacionamientos.add(
+          Row(
+            children: [
+              const Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Total', style: MyFiltersPage.boldStyle),
+                  )
+              ),
+              Text('\$${boletaReserva.precioTotal}', style: MyFiltersPage.boldStyle, ),
+            ],
+          )
+      );
+      detallePrecioEstacionamientos.add(
+        Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: (){},
+                    child: const Text('Más información', style: MyFiltersPage.underlinedStyle,),
+                  ),
+                ),
+              ),
+            ]
+        ),
+      );
+    }
+
+    Widget detallesPrecio = Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: Align(
+          alignment: Alignment.centerLeft,
+          child: SizedBox(
+            width: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: InputDecorator(
+                decoration: InputDecoration(labelText: 'Detalles del precio', labelStyle: greyStyle),
+                child: Padding(padding: const EdgeInsets.all(8.0), child: Column(children: detallePrecioEstacionamientos),),
+              ),
+            ),
+          ),
+      )
+    );
+
+    Widget contactoAnfitrion = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: 'Anfitrion', labelStyle: greyStyle),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            children: [
+              SizedBox(width: double.infinity, child: Text(nombreAnfitrion, style: MyFiltersPage.boldStyle),),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: SizedBox(
+                  width: 200,
+                  height: MySearchBar.topMargin,
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    child: const Text('Contactar anfitrión', style: TextStyle(color: Colors.white),),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    Widget politicaCancelacion = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Align(
+          alignment: Alignment.centerLeft,
+          child: SizedBox(
+            width: double.infinity,
+            child: InputDecorator(
+              decoration: InputDecoration(labelText: 'Cancelar reserva', labelStyle: TextStyle(color: Colors.red[600])),
+              child: Column(
+                children: [
+                  const ListTile(
+                    title: Text('Política de cancelación', style: MyFiltersPage.boldStyle),
+                    subtitle: Text('Esta reserva no es reembolsable'),
+                    trailing: Icon(Icons.navigate_next),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: SizedBox(
+                      width: 200,
+                      height: MySearchBar.topMargin,
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red[600]),
+                        child: const Text('Cancelar reserva', style: TextStyle(color: Colors.white),),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+      ),
+    );
+
+    List<Widget> listViewChildren = [
+      codigoConfirmacion, fechaReserva, descripcionEstacionamiento1, descripcionEstacionamiento2,
+      listadoEstacionamientos, detallesPrecio, contactoAnfitrion, politicaCancelacion
+    ];
+
+    return Scaffold(
+      appBar: appBar,
+      body: Container(
+        height: MediaQuery.of(context).size.height,
+        color: Colors.grey[200],
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.all(8),
+          children: listViewChildren,
+        ),
+      ),
+    );
+  }
+
 }

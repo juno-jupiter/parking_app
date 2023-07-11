@@ -26,6 +26,7 @@ class MyAppState extends ChangeNotifier {
   bool isFirstSearch = true;
   bool isCreatingColeccionFavorito = false;
   bool isSelectingColeccionFavorito = false;
+  bool isUpdatingColeccionFavorito = false;
   int selectedIndex = 0;
 
   SearchFilters searchFilters = SearchFilters(DateTime.now(), DateTime.now().add(const Duration(hours: 1)));
@@ -40,10 +41,14 @@ class MyAppState extends ChangeNotifier {
   DateTime fechaHoraHasta = DateTime.now().add(const Duration(hours: 1));
 
   Function? reloadCallBack;
+  BoletaReserva? ultimaReservaCreada;
 
   Future<void> initPerfilUsuario() async {
     perfilUsuario = await Perfil.getPerfil(database, idPerfil);
-    if (perfilUsuario != null) perfilUsuario!.listadoColeccionesFavoritos = await perfilUsuario!.getColeccionesFavoritos(database);
+    if (perfilUsuario != null) {
+      perfilUsuario!.listadoColeccionesFavoritos = await perfilUsuario!.getColeccionesFavoritos(database);
+      perfilUsuario!.listadoBoletasReserva = await perfilUsuario!.getBoletasReservas(database);
+    }
     notifyListeners();
   }
 
@@ -115,6 +120,24 @@ class MyAppState extends ChangeNotifier {
     toggleSearch();
   }
 
+  Future<String> crearReserva(DateTime fechaDesde, DateTime fechaHasta, List<Estacionamiento> listadoEstacionamientos, String estadoReserva) async {
+    await initPerfilUsuario();
+    if (listadoEstacionamientos.isNotEmpty && (perfilUsuario != null)) {
+      Location? location = await Location.getLocation(database, listadoEstacionamientos.first.locationId);
+      if (location != null) {
+        int idBoletaReserva = await BoletaReserva(-1, location.idLocation, perfilUsuario!.idPerfil, estadoReserva).insert(database);
+        if (idBoletaReserva > 0) {
+          for (var estacionamiento in listadoEstacionamientos) {
+            await RangoFecha(-1, idBoletaReserva, estacionamiento.idEstacionamiento, fechaDesde.toIso8601String(), fechaHasta.toIso8601String()).insert(database);
+          }
+          ultimaReservaCreada = await BoletaReserva.getBoletaReserva(database, idBoletaReserva);
+          return 'ok';
+        }
+      }
+    }
+    return 'error';
+  }
+
   Map getAnfitrion(int idAnfitrion) {
     List<Map> anfitriones = [
       {
@@ -128,52 +151,56 @@ class MyAppState extends ChangeNotifier {
   void closeCreatingColeccion() {
     isCreatingColeccionFavorito = false;
     isSelectingColeccionFavorito = false;
+    isUpdatingColeccionFavorito = false;
     notifyListeners();
   }
 
   void openCreatingColeccion() {
     isCreatingColeccionFavorito = true;
     isSelectingColeccionFavorito = false;
+    isUpdatingColeccionFavorito = false;
     notifyListeners();
   }
 
-  Future<int> toggleFavoriteLocation(Location location, {int idColeccion = -1}) async {
-    if (perfilUsuario == null) await initPerfilUsuario();
-    if (isCreatingColeccionFavorito) return -1;
+  Future<String> toggleFav(bool isFav, Location location) async {
+    await initPerfilUsuario();
     if (perfilUsuario != null) {
       int tieneLocation = perfilUsuario!.tieneLocationFavorito(location);
       if (tieneLocation >= 0) {
-        // Tiene el favorito, lo elimina de la coleccion y actualiza las clases
+        // Si tiene el favorito, lo elimina de la coleccion y actualiza las clases
         ColeccionFavoritos coleccion = perfilUsuario!.listadoColeccionesFavoritos[tieneLocation];
-        for (var favorito in coleccion.favoritosLista) {if (favorito.locationId == location.idLocation) await favorito.delete(database);}
+        for (var favorito in coleccion.favoritosLista) {
+          if (favorito.locationId == location.idLocation) await favorito.delete(database);
+        }
         await initPerfilUsuario();
-      } else {
-        // No tiene el favorito, se tiene que agregar
-        // Si tienes colecciones, se agrega a la ultima coleccion creada/modificada
-        if (perfilUsuario!.ultimaColeccionGuardadaId > 0) {
-          await Favorito(-1, perfilUsuario!.ultimaColeccionGuardadaId, location.idLocation).insert(database);
-          await initPerfilUsuario();
-          return perfilUsuario!.ultimaColeccionGuardadaId;
-        } else {
-          isCreatingColeccionFavorito = true;
-          isSelectingColeccionFavorito = false;
+        if (!isFav) {
+          notifyListeners();
+          return 'eliminar';
         }
       }
+      if (perfilUsuario!.ultimaColeccionGuardadaId > 0) {
+        if (isFav) await Favorito(-1, perfilUsuario!.ultimaColeccionGuardadaId, location.idLocation).insert(database);
+        await initPerfilUsuario();
+        notifyListeners();
+        return isFav? 'crearFavorito' : 'eliminar';
+      } else {
+        isCreatingColeccionFavorito = true;
+        notifyListeners();
+        return 'crear';
+      }
     }
-    notifyListeners();
-    return -1;
-    //if (favLocations.contains(location.idLocation)) {favLocations.remove(location.idLocation);} else {favLocations.add(location.idLocation);}
+    return '';
   }
 
   Future<int> crearColeccion(String nombreColeccion, Location location) async {
-    if (perfilUsuario == null) await initPerfilUsuario();
+    await initPerfilUsuario();
     if (!isCreatingColeccionFavorito) return -1;
     if (perfilUsuario != null) {
       int idColeccion = await ColeccionFavoritos(-1, perfilUsuario!.idPerfil, nombreColeccion).insert(database);
       await Perfil(perfilUsuario!.idPerfil, perfilUsuario!.moneda, perfilUsuario!.numeroTelefonico, idColeccion).insert(database);
       isCreatingColeccionFavorito = false;
-      await initPerfilUsuario();
-      toggleFavoriteLocation(location);
+      isUpdatingColeccionFavorito = false;
+      await toggleFav(true, location);
       return idColeccion;
     }
     return -1;
@@ -185,6 +212,19 @@ class MyAppState extends ChangeNotifier {
     if (perfilUsuario != null) {
       isSelectingColeccionFavorito = true;
       isCreatingColeccionFavorito = false;
+      isUpdatingColeccionFavorito = false;
+    }
+    notifyListeners();
+    return -1;
+  }
+
+  Future<int> openUpdateColeccion() async {
+    if (perfilUsuario == null) await initPerfilUsuario();
+    if (isUpdatingColeccionFavorito) return -1;
+    if (perfilUsuario != null) {
+      isSelectingColeccionFavorito = false;
+      isCreatingColeccionFavorito = false;
+      isUpdatingColeccionFavorito = true;
     }
     notifyListeners();
     return -1;

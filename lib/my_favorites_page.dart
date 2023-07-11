@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:parking_app/location_card.dart';
+import 'package:parking_app/update_favorites.dart';
 import 'package:provider/provider.dart';
 import 'package:parking_app/table_entities.dart';
 import 'package:parking_app/my_app_state.dart';
@@ -39,7 +41,7 @@ class MyFavoritesPage extends StatelessWidget {
       );
     } else {
       List<Widget> listViewChildren = [];
-      for (var favoritos in listaColeccionesFavoritos) {listViewChildren.add(ColeccionFavoritosCard(coleccionFavoritos: favoritos,));}
+      for (var favoritos in listaColeccionesFavoritos.reversed) {listViewChildren.add(ColeccionFavoritosCard(coleccionFavoritos: favoritos,));}
 
       double totalHeight = MediaQuery.of(context).size.height;
       favoriteContainer = Container(
@@ -57,106 +59,169 @@ class MyFavoritesPage extends StatelessWidget {
 
 }
 
-class BottomSheetColeccionFavoritos extends StatelessWidget {
-  static const double iconSize = 30.0;
-  final Location location;
-  final List<ColeccionFavoritos> listadoColeccionesFavoritos;
 
-  const BottomSheetColeccionFavoritos({super.key, required this.location, required this.listadoColeccionesFavoritos,});
-
+class FavoriteCollectionPage extends StatefulWidget {
+  final ColeccionFavoritos coleccionFavoritos;
+  const FavoriteCollectionPage(this.coleccionFavoritos, { super.key });
   @override
-  Widget build(BuildContext context) {
-    final appState = Provider.of<MyAppState>(context, listen: true);
-
-    Widget titleBar = Center(
-      child: ListTile(
-        leading: IconButton.outlined(
-          icon: const Icon(Icons.close, size: iconSize,),
-          onPressed: () {
-            appState.closeCreatingColeccion();
-          },
-        ),
-        title: const Text('Tus favoritos'),
-        titleTextStyle: Theme.of(context).textTheme.titleLarge,
-      ),
-    );
-
-    List<Widget> listViewChildren = [ColeccionFavoritosCard(coleccionFavoritos: null, location: location,)];
-    if (listadoColeccionesFavoritos.isEmpty) {
-      // Abrir popup crear coleccion
-    } else {
-      for (var favoritos in listadoColeccionesFavoritos) {listViewChildren.add(ColeccionFavoritosCard(location: location, coleccionFavoritos: favoritos,));}
-    }
-
-    return Material(
-      child: Column(
-        children: [
-          titleBar,
-          const Divider(),
-          ListView(
-            shrinkWrap: true,
-            children: listViewChildren,
-          ),
-        ],
-      ),
-    );
-  }
+  State<FavoriteCollectionPage> createState() => _FavoriteCollectionPageState();
 }
 
-class ColeccionFavoritosCard extends StatelessWidget {
-  static const TextStyle boldStyle = TextStyle(fontWeight: FontWeight.bold,);
-  final ColeccionFavoritos? coleccionFavoritos;
-  final Location? location;
+class _FavoriteCollectionPageState extends State<FavoriteCollectionPage> {
+  final myTextController = TextEditingController();
 
-  const ColeccionFavoritosCard({super.key, this.coleccionFavoritos, this.location});
-
-  Card getLocationCard(BuildContext context, MyAppState appState) {
-    Widget? cardImage;
-    if (coleccionFavoritos == null) {
-      cardImage = Container(color: Colors.white, child: const Icon(Icons.add, size: BottomSheetColeccionFavoritos.iconSize,),);
-    }
-    else if (coleccionFavoritos!.favoritosLista.isNotEmpty) {
-      cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));
-    } else {
-      cardImage = const SizedBox(width: 200, height: 200, child: null,);
-    }
-
-    return Card(
-      clipBehavior: Clip.hardEdge,
-      child: InkWell(
-        splashColor: Theme.of(context).primaryColor.withAlpha(30),
-        onTap: () {
-          if ((coleccionFavoritos == null) && (location != null)) {
-            appState.openCreatingColeccion();
-          }
-        },
-        child: Row(
-          children: [
-            ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 100),
-                child: Container(
-                  color: Colors.grey,
-                    width: 150, height: double.infinity,
-                    child: FittedBox(clipBehavior: Clip.hardEdge, fit: BoxFit.fill, child: cardImage,)
-                )
-            ),
-            Expanded(
-              child: ListTile(
-                title: Text(
-                  (coleccionFavoritos != null) ? coleccionFavoritos!.nombreColeccionFavoritos : 'Crear una nueva lista de favoritos',
-                  style: MyFiltersPage.inputDecoratorLabelStyle,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    // Clean up the controller when the widget is disposed.
+    myTextController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<MyAppState>(context, listen: true);
-    return getLocationCard(context, appState);
+
+    AppBar appBar = AppBar(
+      leading: const BackButton(),
+      title: Align(alignment: Alignment.centerLeft, child: Text(widget.coleccionFavoritos.nombreColeccionFavoritos)),
+      actions: [
+        IconButton(onPressed: () async {
+          await appState.openUpdateColeccion();
+        },
+          icon: const Icon(Icons.more_vert),
+        )
+      ],
+    );
+    List<Widget> listViewChildren = [];
+    for (var favorito in widget.coleccionFavoritos.favoritosLista) {
+      if (favorito.location != null) listViewChildren.add(LocationCard(favorito.location!));
+    }
+
+    List<Widget> stackChildren = [
+      Scaffold(
+          appBar: appBar,
+          body: Container(
+            color: Colors.white,
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(8),
+              children: listViewChildren,
+            ),
+          ),
+      )
+    ];
+    double totalHeight = MediaQuery.of(context).size.height;
+    if (appState.isUpdatingColeccionFavorito) {
+      stackChildren.add(
+        Stack(
+          children: [
+            SizedBox(
+              height: totalHeight,
+              child: Material(
+                color: Colors.black54,
+                child: InkWell(onTap: (){
+                  setState(() {
+                    myTextController.text = widget.coleccionFavoritos.nombreColeccionFavoritos;
+                  });
+                  appState.closeCreatingColeccion();
+                },),
+              ),
+            ),
+            Column(
+              children: [
+                Expanded(child: Container(child: null)),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: totalHeight * 0.35),
+                    child: SizedBox(
+                      height: totalHeight * 0.35,
+                      child: Card(
+                        color: Colors.white,
+                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(topLeft: Radius.circular(15), topRight: Radius.circular(15)),),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    myTextController.text = widget.coleccionFavoritos.nombreColeccionFavoritos;
+                                  });
+                                  appState.closeCreatingColeccion();
+                                },
+                                icon: const Icon(Icons.close),
+                              ),
+                              title: const Text('Configuración', style: LocationCard.boldStyle,),
+                              trailing: TextButton(
+                                onPressed: () {},
+                                child: const Text('Eliminar', style: MyFiltersPage.underlinedStyle),
+                              ),
+                            ),
+                            const Divider(),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  const Spacer(flex: 1),
+                                  Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: TextField(
+                                      controller: myTextController,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        labelText: 'Nombre de la lista de favoritos',
+                                        hintText: 'Nombre de la lista de favoritos',
+                                        helperText: 'Máximo 50 caracteres',
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(flex: 1),
+                                ],
+                              ),
+                            ),
+                            const Divider(),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                children: [
+                                  TextButton(
+                                      onPressed: (){
+                                        setState(() {
+                                          myTextController.text = widget.coleccionFavoritos.nombreColeccionFavoritos;
+                                        });
+                                        appState.closeCreatingColeccion();
+                                        },
+                                      child: const Text('Cancelar', style: MyFiltersPage.underlinedStyle,),
+                                  ),
+                                  const Spacer(flex: 1,),
+                                  ElevatedButton(
+                                      onPressed: () async {
+                                        if (myTextController.text.isEmpty) return;
+                                        // Guardar cambios
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('Guardar', style: TextStyle(color: Colors.white),),
+                                      )
+                                  ),
+                                ],
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      );
+    } else {
+      setState(() {
+        myTextController.text = widget.coleccionFavoritos.nombreColeccionFavoritos;
+      });
+    }
+
+    return Stack(children: stackChildren,);
   }
 }

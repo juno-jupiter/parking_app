@@ -22,6 +22,8 @@ Future<void> main() async {
         await IdiomaPersona.createTable(database);
         await ColeccionFavoritos.createTable(database);
         await Favorito.createTable(database);
+        await RangoFecha.createTable(database);
+        await BoletaReserva.createTable(database);
       }
   );
   await Perfil(1, 'CLP', '', -1).insert(database);

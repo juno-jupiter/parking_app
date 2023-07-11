@@ -5,8 +5,7 @@ import 'package:parking_app/my_app_state.dart';
 import 'package:parking_app/my_reservation_page.dart';
 import 'package:parking_app/my_filters_page.dart';
 import 'package:parking_app/my_search_bar.dart';
-
-import 'my_favorites_page.dart';
+import 'package:parking_app/update_favorites.dart';
 
 Widget ratingObjeto(double rating) {
   return ConstrainedBox(
@@ -105,9 +104,9 @@ class _LocationPageState extends State<LocationPage> {
       ),
       actions: [
         IconButton(onPressed: () async {
-          int idColCreada = await appState.toggleFavoriteLocation(widget.location);
-          if (idColCreada > 0) {
-            ColeccionFavoritos? colCreada = await ColeccionFavoritos.getColeccionFavoritos(appState.database, idColCreada);
+          String msg = await appState.toggleFav(!isFav, widget.location);
+          if (msg == 'crearFavorito' && appState.perfilUsuario != null) {
+            ColeccionFavoritos? colCreada = (appState.perfilUsuario!.listadoColeccionesFavoritos.isEmpty) ? null : appState.perfilUsuario!.listadoColeccionesFavoritos.last;
             final snackBar = SnackBar(
               content: Text('Agregada a ${colCreada?.nombreColeccionFavoritos}'),
               action: SnackBarAction(
@@ -421,7 +420,7 @@ class _LocationPageState extends State<LocationPage> {
             SizedBox(
               height: totalHeight,
               child: Material(
-                color: Colors.black87,
+                color: Colors.black54,
                 child: InkWell(onTap: (){
                   myTextController.text = '';
                   appState.closeCreatingColeccion();
@@ -474,6 +473,7 @@ class _LocationPageState extends State<LocationPage> {
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
                               onPressed: () async {
+                                if (myTextController.text.isEmpty) return;
                                 int idColCreada = await appState.crearColeccion(myTextController.text, widget.location);
                                 if (idColCreada > 0) {
                                   ColeccionFavoritos? colCreada = await ColeccionFavoritos.getColeccionFavoritos(appState.database, idColCreada);
@@ -512,7 +512,7 @@ class _LocationPageState extends State<LocationPage> {
             SizedBox(
               height: totalHeight,
               child: Material(
-                color: Colors.black87,
+                color: Colors.black54,
                 child: InkWell(onTap: (){
                   myTextController.text = '';
                   appState.closeCreatingColeccion();
@@ -673,7 +673,6 @@ class _LocationCardState extends State<LocationCard> {
                     ),
                     IconButton(
                       onPressed: () async {
-                        appState.toggleFavoriteLocation(widget.location);
                         },
                       icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
                     ),

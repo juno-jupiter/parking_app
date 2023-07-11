@@ -11,18 +11,25 @@ String formatDate(DateTime dateTime, String languageTag) {
   return '${dia.substring(0, 3)}., $diaMes.';
 }
 
-String getTimeRangeString(MyAppState appState, {splitTimeDay=true}) {
-  DateTime fechaHoraDesde = appState.searchFilters.fechaHoraDesde;
-  DateTime fechaHoraHasta = appState.searchFilters.fechaHoraHasta;
-  String strHoraDesde = DateFormat('jm', appState.languageTag).format(fechaHoraDesde);
-  String strDiaDesde = formatDate(fechaHoraDesde, appState.languageTag);
-  String strHoraHasta = DateFormat('jm', appState.languageTag).format(fechaHoraHasta);
-  String strDiaHasta = formatDate(fechaHoraHasta, appState.languageTag);
+String formatHora(DateTime dateTime, String languageTag) {return DateFormat('jm', languageTag).format(dateTime);}
+
+String getStringFromDates(DateTime fechaHoraDesde, DateTime fechaHoraHasta, String languageTag, {splitTimeDay=true}) {
+  String strHoraDesde = formatHora(fechaHoraDesde, languageTag);
+  String strDiaDesde = formatDate(fechaHoraDesde, languageTag);
+  String strHoraHasta = formatHora(fechaHoraHasta, languageTag);
+  String strDiaHasta = formatDate(fechaHoraHasta, languageTag);
   String splitter = splitTimeDay ? '\n' : ' ';
   if (fechaHoraDesde.day != fechaHoraHasta.day) {
     return '$strDiaDesde - $strDiaHasta$splitter$strHoraDesde - $strHoraHasta';
   }
   return '$strDiaDesde$splitter$strHoraDesde - $strHoraHasta';
+}
+
+String getTimeRangeString(MyAppState appState, {splitTimeDay=true}) {
+  DateTime fechaHoraDesde = appState.searchFilters.fechaHoraDesde;
+  DateTime fechaHoraHasta = appState.searchFilters.fechaHoraHasta;
+  String languageTag = appState.languageTag;
+  return getStringFromDates(fechaHoraDesde, fechaHoraHasta, languageTag);
 }
 
 class Location {
@@ -87,12 +94,17 @@ class Location {
     final List<Map> maps = await database.query('locations', where: 'idLocation = ?', whereArgs: [locationId]);
     if (maps.isNotEmpty) {
       Location newLocation = Location.fromMap(maps.first);
+      newLocation.estacionamientosLista = [];
       final List<Map> mapsEstacionamientos = await database.rawQuery('''
       SELECT * FROM estacionamientos LEFT JOIN locations ON estacionamientos.locationId = ? ORDER BY estacionamientos.idEstacionamiento;
       ''', [locationId]);
+      Map<int, Estacionamiento> estacionamientosAgregados = {};
       for (var map in mapsEstacionamientos) {
         Estacionamiento newEstacionamiento = Estacionamiento.fromMap(map);
-        newLocation.estacionamientosLista.add(newEstacionamiento);
+        if (!estacionamientosAgregados.containsKey(newEstacionamiento.idEstacionamiento)) {
+          newLocation.estacionamientosLista.add(newEstacionamiento);
+          estacionamientosAgregados[newEstacionamiento.idEstacionamiento] = newEstacionamiento;
+        }
       }
       return newLocation;
     }
@@ -272,6 +284,7 @@ class Favorito {
   final int idFavorito;
   final int coleccionFavoritosId;
   final int locationId;
+  Location? location;
   Favorito(this.idFavorito, this.coleccionFavoritosId, this.locationId);
 
   Map<String, dynamic> toMap() {return {'idFavorito': idFavorito, 'coleccionFavoritosId': coleccionFavoritosId,'locationId': locationId, };}
@@ -344,7 +357,9 @@ class ColeccionFavoritos {
     List<Favorito> nuevoListado = [];
     final List<Map> maps = await database.query('favoritos', where: 'coleccionFavoritosId = ?', whereArgs: [idColeccionFavoritos]);
     for (var map in maps) {
-      nuevoListado.add(Favorito.fromMap(map));
+      Favorito fav = Favorito.fromMap(map);
+      fav.location = await Location.getLocation(database, fav.locationId);
+      nuevoListado.add(fav);
     }
     return nuevoListado;
   }
@@ -370,12 +385,12 @@ class ColeccionFavoritos {
 }
 
 class Perfil {
-  static const List<String> listaMonedas = ['CLP', 'USD',];
   final int idPerfil;
   final String moneda;
   final String numeroTelefonico;
   final int ultimaColeccionGuardadaId;
   List<ColeccionFavoritos> listadoColeccionesFavoritos = [];
+  List<BoletaReserva> listadoBoletasReserva = [];
 
   Perfil(this.idPerfil, this.moneda, this.numeroTelefonico, this.ultimaColeccionGuardadaId);
 
@@ -392,6 +407,22 @@ class Perfil {
       ColeccionFavoritos coleccion = ColeccionFavoritos.fromMap(map);
       coleccion.favoritosLista = await coleccion.getFavoritos(database);
       nuevoListado.add(coleccion);
+    }
+    return nuevoListado;
+  }
+
+  Future<List<BoletaReserva>> getBoletasReservas(Database database) async {
+    List<BoletaReserva> nuevoListado = [];
+    final List<Map> maps = await database.query('boletas_reserva', where: 'perfilId = ?', whereArgs: [idPerfil]);
+    List<int> idsEncontrados = [];
+    for (var map in maps) {
+      BoletaReserva? reserva = await BoletaReserva.getBoletaReserva(database, int.parse(map['idBoletaReserva'].toString()));
+      if (!idsEncontrados.contains(reserva?.idBoletaReserva)){
+        if (reserva != null) {
+          nuevoListado.add(reserva);
+          idsEncontrados.add(reserva.idBoletaReserva);
+        }
+      }
     }
     return nuevoListado;
   }
@@ -427,4 +458,166 @@ class Perfil {
     create table perfiles(idPerfil integer primary key, moneda text, numeroTelefonico text, ultimaColeccionGuardadaId integer)
     ''',);
   }
+}
+
+class RangoFecha {
+  final int idRangoFecha;
+  final int boletaReservaId;
+  final int estacionamientoId;
+  final String strFechaHoraDesde;
+  final String strFechaHoraHasta;
+  DateTime fechaHoraDesde = DateTime.now();
+  DateTime fechaHoraHasta = DateTime.now();
+  Estacionamiento? estacionamiento;
+  double precioTotal = 0;
+
+  RangoFecha(this.idRangoFecha, this.boletaReservaId, this.estacionamientoId, this.strFechaHoraDesde, this.strFechaHoraHasta,);
+
+  Map<String, dynamic> toMap() {
+    return {'idRangoFecha': idRangoFecha, 'boletaReservaId': boletaReservaId, 'estacionamientoId': estacionamientoId, 'strFechaHoraDesde': strFechaHoraDesde, 'strFechaHoraHasta': strFechaHoraHasta,};
+  }
+  Future<int> insert(Database database) async {
+    if (idRangoFecha < 0) {
+      // Self increment
+      final List<Map> maps = await database.query('rangos_fecha', where: 'idRangoFecha=(SELECT max(idRangoFecha) from rangos_fecha)',);
+      int lastId = 0;
+      if (maps.isNotEmpty) lastId = int.parse(maps.last['idRangoFecha'].toString());
+      return RangoFecha(lastId + 1, boletaReservaId, estacionamientoId, strFechaHoraDesde, strFechaHoraHasta).insert(database);
+    }
+    await database.insert('rangos_fecha', toMap(), conflictAlgorithm: ConflictAlgorithm.replace,);
+    return idRangoFecha;
+  }
+  Future<void> delete(Database database) async {await database.delete('rangos_fecha', where: 'idRangoFecha = ?', whereArgs: [idRangoFecha],);}
+
+  static RangoFecha fromMap(Map map) {
+    return RangoFecha(int.parse(map['idRangoFecha'].toString()), int.parse(map['boletaReservaId'].toString()), int.parse(map['estacionamientoId'].toString()),
+      map['strFechaHoraDesde'], map['strFechaHoraHasta'],);
+  }
+
+  static Future<RangoFecha?> getRangoFecha(Database database, int idRangoFecha) async {
+    final List<Map> maps = await database.query('rangos_fecha', where: 'idRangoFecha = ?', whereArgs: [idRangoFecha]);
+    if (maps.isNotEmpty) {
+      RangoFecha nuevaFecha = RangoFecha.fromMap(maps.first);
+      nuevaFecha.estacionamiento = await Estacionamiento.getEstacionamiento(database, nuevaFecha.estacionamientoId);
+      return nuevaFecha;
+    }
+    return null;
+  }
+
+  static Future<List<RangoFecha>> getRangoFechaList(Database database) async {
+    final List<Map> maps = await database.query('rangos_fecha');
+    List<RangoFecha> rangosFechaList = [];
+    for (var map in maps) {rangosFechaList.add(RangoFecha.fromMap(map));}
+    return rangosFechaList;
+  }
+
+  static Future<void> createTable(database) async {
+    return database.execute('''
+    create table rangos_fecha(idRangoFecha integer primary key, boletaReservaId integer, estacionamientoId integer, strFechaHoraDesde text, strFechaHoraHasta text)
+    ''',);
+  }
+
+  void recalculateTotalCost() {
+    //DateTime dt = DateTime.parse('2020-01-02 03:04:05');
+    fechaHoraDesde = DateTime.parse(strFechaHoraDesde);
+    fechaHoraHasta = DateTime.parse(strFechaHoraHasta);
+    precioTotal = 0;
+    if (estacionamiento != null) {
+      estacionamiento!.precioTotal = estacionamiento!.getTotalCost(getTotalDuration());
+      precioTotal = estacionamiento!.precioTotal;
+    }
+  }
+
+  double getTotalDuration() {return fechaHoraHasta.difference(fechaHoraDesde).inMinutes.toDouble();}
+}
+
+class BoletaReserva {
+  static const List<String> listaMonedas = ['CLP', 'USD',];
+  static const estadoActivo = 'activo';
+  static const estadoPendiente = 'pendiente';
+  static const estadoCancelado = 'cancelado';
+  static const List<String> estadosReserva = ['activo', 'pendiente', 'cancelado',];
+  static const double porcentajeCargoServicio = 0.2;
+  final int idBoletaReserva;
+  final int locationId;
+  final int perfilId;
+  final String estadoReserva;
+  List<RangoFecha> listaRangoFecha = [];
+  double precioTotal = 0;
+  double precioTotalEstacionamientos = 0;
+  double cargoServicio = 0;
+  Location? location;
+
+  BoletaReserva(this.idBoletaReserva, this.locationId, this.perfilId, this.estadoReserva);
+
+  Map<String, dynamic> toMap() {
+    return {'idBoletaReserva': idBoletaReserva, 'locationId': locationId, 'perfilId': perfilId, 'estadoReserva': estadoReserva,};
+  }
+  Future<int> insert(Database database) async {
+    if (idBoletaReserva < 0) {
+      // Self increment
+      final List<Map> maps = await database.query('boletas_reserva', where: 'idBoletaReserva=(SELECT max(idBoletaReserva) from boletas_reserva)',);
+      int lastId = 0;
+      if (maps.isNotEmpty) lastId = int.parse(maps.last['idBoletaReserva'].toString());
+      return BoletaReserva(lastId + 1, locationId, perfilId, estadoReserva,).insert(database);
+    }
+    await database.insert('boletas_reserva', toMap(), conflictAlgorithm: ConflictAlgorithm.replace,);
+    return idBoletaReserva;
+  }
+  Future<void> delete(Database database) async {await database.delete('boletas_reserva', where: 'idBoletaReserva = ?', whereArgs: [idBoletaReserva],);}
+
+  static BoletaReserva fromMap(Map map) {
+    return BoletaReserva(int.parse(map['idBoletaReserva'].toString()), int.parse(map['locationId'].toString()), int.parse(map['perfilId'].toString()),
+      map['estadoReserva'],);
+  }
+
+  static Future<BoletaReserva?> getBoletaReserva(Database database, int idBoletaReserva) async {
+    final List<Map> maps = await database.query('boletas_reserva', where: 'idBoletaReserva = ?', whereArgs: [idBoletaReserva]);
+    if (maps.isNotEmpty) {
+      BoletaReserva nuevaBoleta = BoletaReserva.fromMap(maps.first);
+      nuevaBoleta.location = await Location.getLocation(database, nuevaBoleta.locationId);
+      final List<Map> mapRangosFecha = await database.query('rangos_fecha', where: 'boletaReservaId = ?', whereArgs: [idBoletaReserva], orderBy: 'idRangofecha asc');
+      Map<int, RangoFecha> fechasAgregadas = {};
+      for (var map in mapRangosFecha) {
+        RangoFecha nuevaFecha = RangoFecha.fromMap(map);
+        if (!fechasAgregadas.containsKey(nuevaFecha.idRangoFecha)) {
+          nuevaFecha.estacionamiento = await Estacionamiento.getEstacionamiento(database, nuevaFecha.estacionamientoId);
+          nuevaBoleta.listaRangoFecha.add(nuevaFecha);
+          fechasAgregadas[nuevaFecha.idRangoFecha] = nuevaFecha;
+        }
+      }
+      nuevaBoleta.recalculateTotalCost();
+      return nuevaBoleta;
+    }
+    return null;
+  }
+
+  static Future<List<BoletaReserva>> getBoletaReservaList(Database database) async {
+    final List<Map> maps = await database.query('boletas_reserva');
+    List<BoletaReserva> boletasReservaList = [];
+    for (var map in maps) {boletasReservaList.add(BoletaReserva.fromMap(map));}
+    return boletasReservaList;
+  }
+
+  static Future<void> createTable(database) async {
+    return database.execute('''
+    create table boletas_reserva(idBoletaReserva integer primary key, locationId integer, perfilId integer, estadoReserva text)
+    ''',);
+  }
+
+  void recalculateTotalCost() {
+    precioTotalEstacionamientos = 0;
+    for (var rangoFecha in listaRangoFecha) {
+      rangoFecha.recalculateTotalCost();
+      precioTotalEstacionamientos += rangoFecha.precioTotal;
+    }
+    cargoServicio = double.parse((precioTotalEstacionamientos * porcentajeCargoServicio).toStringAsFixed(2));
+    precioTotal = precioTotalEstacionamientos + cargoServicio;
+  }
+
+  double getTotalDuration() {
+    if (listaRangoFecha.isNotEmpty) return listaRangoFecha.last.fechaHoraHasta.difference(listaRangoFecha.first.fechaHoraDesde).inMinutes.toDouble();
+    return 0.0;
+  }
+
 }
