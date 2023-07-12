@@ -12,7 +12,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Intl.systemLocale = await findSystemLocale();
-  await deleteDatabase('parking.db');
+  //await deleteDatabase('parking.db');
   final Database database = await openDatabase(
     join(await getDatabasesPath(), 'parking.db'), version: 1,
       onCreate: (database, version) async {
