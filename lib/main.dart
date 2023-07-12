@@ -7,6 +7,7 @@ import 'package:intl/intl_standalone.dart';
 import 'package:parking_app/table_entities.dart';
 import 'package:parking_app/my_app_state.dart';
 import 'package:parking_app/my_home_page.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,10 @@ class MyApp extends StatelessWidget {
         title: 'Parking App',
         theme: ThemeData(primarySwatch: Colors.blue,),
         home: myHomePage,
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        supportedLocales: const [
+          Locale('es', ''),
+        ],
       ),
     );
   }

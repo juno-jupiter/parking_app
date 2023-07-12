@@ -72,7 +72,7 @@ class Location {
   void recalculateTotalCost(double durationMinutes) {
     double precioMenor = double.maxFinite;
     for (var parking in estacionamientosLista) {
-      parking.precioTotal = parking.getTotalCost(durationMinutes);
+      parking.precioTotal = double.parse(parking.getTotalCost(durationMinutes).toStringAsFixed(0));
       if (parking.precioTotal < precioMenor) {precioMenor = parking.precioTotal;}
     }
     precioMinimo = precioMenor;
@@ -390,7 +390,7 @@ class Perfil {
   final String numeroTelefonico;
   final int ultimaColeccionGuardadaId;
   List<ColeccionFavoritos> listadoColeccionesFavoritos = [];
-  List<BoletaReserva> listadoBoletasReserva = [];
+  List<List<BoletaReserva>> listadoBoletasReserva = [];
 
   Perfil(this.idPerfil, this.moneda, this.numeroTelefonico, this.ultimaColeccionGuardadaId);
 
@@ -411,16 +411,19 @@ class Perfil {
     return nuevoListado;
   }
 
-  Future<List<BoletaReserva>> getBoletasReservas(Database database) async {
-    List<BoletaReserva> nuevoListado = [];
+  Future<List<List<BoletaReserva>>> getBoletasReservas(Database database) async {
+    List<List<BoletaReserva>> nuevoListado = [[], [], [], []];
     final List<Map> maps = await database.query('boletas_reserva', where: 'perfilId = ?', whereArgs: [idPerfil]);
     List<int> idsEncontrados = [];
     for (var map in maps) {
       BoletaReserva? reserva = await BoletaReserva.getBoletaReserva(database, int.parse(map['idBoletaReserva'].toString()));
       if (!idsEncontrados.contains(reserva?.idBoletaReserva)){
         if (reserva != null) {
-          nuevoListado.add(reserva);
-          idsEncontrados.add(reserva.idBoletaReserva);
+          int selectedType = BoletaReserva.estadosReserva.indexOf(reserva.estadoReserva);
+          if ((selectedType > -1) && (selectedType < nuevoListado.length)) {
+            nuevoListado[selectedType].add(reserva);
+            idsEncontrados.add(reserva.idBoletaReserva);
+          }
         }
       }
     }
@@ -523,7 +526,7 @@ class RangoFecha {
     fechaHoraHasta = DateTime.parse(strFechaHoraHasta);
     precioTotal = 0;
     if (estacionamiento != null) {
-      estacionamiento!.precioTotal = estacionamiento!.getTotalCost(getTotalDuration());
+      estacionamiento!.precioTotal = double.parse(estacionamiento!.getTotalCost(getTotalDuration()).toStringAsFixed(0));
       precioTotal = estacionamiento!.precioTotal;
     }
   }
@@ -536,7 +539,8 @@ class BoletaReserva {
   static const estadoActivo = 'activo';
   static const estadoPendiente = 'pendiente';
   static const estadoCancelado = 'cancelado';
-  static const List<String> estadosReserva = ['activo', 'pendiente', 'cancelado',];
+  static const estadoCompletada = 'completada';
+  static const List<String> estadosReserva = ['activo', 'completada', 'pendiente', 'cancelado',];
   static const double porcentajeCargoServicio = 0.2;
   final int idBoletaReserva;
   final int locationId;
@@ -611,7 +615,8 @@ class BoletaReserva {
       rangoFecha.recalculateTotalCost();
       precioTotalEstacionamientos += rangoFecha.precioTotal;
     }
-    cargoServicio = double.parse((precioTotalEstacionamientos * porcentajeCargoServicio).toStringAsFixed(2));
+    precioTotalEstacionamientos = double.parse(precioTotalEstacionamientos.toStringAsFixed(0));
+    cargoServicio = double.parse((precioTotalEstacionamientos * porcentajeCargoServicio).toStringAsFixed(0));
     precioTotal = precioTotalEstacionamientos + cargoServicio;
   }
 

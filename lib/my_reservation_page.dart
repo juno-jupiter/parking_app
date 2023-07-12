@@ -38,8 +38,9 @@ class _MyReservationPageState extends State<MyReservationPage> {
     bool isSelected = widget.tieneEstacionamientoSelected(totalDuration.inMinutes.toDouble());
     precioTotal = 0;
     for (var estacionamiento in widget.location.estacionamientosLista){precioTotal += estacionamiento.precioTotal;}
-    double cargoServicio = double.parse((precioTotal * widget.cargoServicio).toStringAsFixed(2));
+    double cargoServicio = double.parse((precioTotal * widget.cargoServicio).toStringAsFixed(0));
     precioTotal += cargoServicio;
+    precioTotal = double.parse(precioTotal.toStringAsFixed(0));
 
     String stringTiempoTotal = '';
     if (justDays > 0) stringTiempoTotal = '$justDays dia${(justDays > 1) ? 's' : ''}';
@@ -404,12 +405,13 @@ class _MyReservationPageState extends State<MyReservationPage> {
                       appState.selectNavigationIndex(NavigationPageIndex.scheduled);
                       // navegar a reserva creada
                       print('reserva creada ${appState.ultimaReservaCreada?.idBoletaReserva}');
-                      await appState.initPerfilUsuario();
                       if (appState.ultimaReservaCreada != null) {
-                        const snackBar = SnackBar(content: Text('Reserva solicitada'),);
+                        appState.scheduledPageSelectedIndex = BoletaReserva.estadosReserva.indexOf(estadoReserva);
+                        final snackBar = SnackBar(content: Text((estadoReserva == BoletaReserva.estadoPendiente) ? 'Solicitud enviada' : 'Reserva éxitosa'),);
                         ScaffoldMessenger.of(context).showSnackBar(snackBar);
                         Navigator.of(context).push(MaterialPageRoute(builder: (context)=> DetalleBoletaPage(appState.ultimaReservaCreada!)));
                       }
+                      await appState.initPerfilUsuario();
                     }
                   } : null,
                   child: const Padding(

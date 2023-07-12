@@ -72,7 +72,6 @@ class _LocationPageState extends State<LocationPage> {
   Widget build(BuildContext context) {
     final appState = Provider.of<MyAppState>(context, listen: true);
 
-    //bool isFav = appState.favLocations.contains(widget.location.idLocation);
     bool isFav = (appState.perfilUsuario != null) ? (appState.perfilUsuario!.tieneLocationFavorito(widget.location) >= 0) : false;
     Image? cardImage;
     if (widget.location.idLocation > 0) {cardImage = const Image(image: AssetImage("assets/nunoa.jpg"));}
@@ -180,8 +179,8 @@ class _LocationPageState extends State<LocationPage> {
                 )
             )
         );
-        numCaracLoc++;
       }
+      numCaracLoc++;
     }
     listaCaracteristicas.add(const Divider());
 

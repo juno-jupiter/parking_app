@@ -11,11 +11,56 @@ class MyScheduledPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<MyAppState>(context, listen: true);
+    int selectedIndex = appState.scheduledPageSelectedIndex;
+
+    List<List<BoletaReserva>> todasLasReservas = [[], [], [], []];
     List<BoletaReserva> listaBoletasReserva = [];
-    if (appState.perfilUsuario != null) listaBoletasReserva = appState.perfilUsuario!.listadoBoletasReserva;
+    if (appState.perfilUsuario != null) {
+      todasLasReservas = appState.perfilUsuario!.listadoBoletasReserva;
+      listaBoletasReserva = todasLasReservas[selectedIndex];
+    }
     Widget scheduledContainer;
 
-    if (listaBoletasReserva.isEmpty) {
+    List<bool> toggleButtonIsSelected = List<bool>.filled(4, false);
+    toggleButtonIsSelected[selectedIndex] = true;
+
+    TextStyle toggleSelectedStyle = const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16);
+    TextStyle greyStyle = const TextStyle(color: Colors.grey,);
+
+    Widget navigationBar = SizedBox(
+      width: double.infinity,
+      child: Center(
+        child: ToggleButtons(
+          onPressed: (int index) {
+            appState.selectScheduledNavigationIndex(index);
+          },
+          fillColor: Colors.white10,
+          borderColor: Colors.white10,
+          selectedBorderColor: Colors.white10,
+          isSelected: toggleButtonIsSelected,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text('Activas', style: toggleButtonIsSelected[0] ? toggleSelectedStyle : greyStyle,),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+                child: Text('Completadas', style: toggleButtonIsSelected[1] ? toggleSelectedStyle : greyStyle,),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text('Pendientes', style: toggleButtonIsSelected[2] ? toggleSelectedStyle : greyStyle,),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text('Canceladas', style: toggleButtonIsSelected[3] ? toggleSelectedStyle : greyStyle,),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (todasLasReservas.isEmpty) {
       scheduledContainer = Container(
         color: Colors.white,
         child: Column(
@@ -66,10 +111,16 @@ class MyScheduledPage extends StatelessWidget {
       scheduledContainer = Container(
         height: totalHeight,
         color: Colors.white,
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(8),
-          children: listViewChildren,
+        child: Column(
+          children: [
+            navigationBar,
+            const Divider(),
+            ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(8),
+              children: listViewChildren,
+            ),
+          ],
         ),
       );
     }

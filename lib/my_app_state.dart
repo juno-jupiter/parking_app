@@ -28,6 +28,7 @@ class MyAppState extends ChangeNotifier {
   bool isSelectingColeccionFavorito = false;
   bool isUpdatingColeccionFavorito = false;
   int selectedIndex = 0;
+  int scheduledPageSelectedIndex = 0;
 
   SearchFilters searchFilters = SearchFilters(DateTime.now(), DateTime.now().add(const Duration(hours: 1)));
 
@@ -54,6 +55,12 @@ class MyAppState extends ChangeNotifier {
 
   void selectNavigationIndex(int index) {
     selectedIndex = index;
+    notifyListeners();
+  }
+
+  void selectScheduledNavigationIndex(int index) async {
+    scheduledPageSelectedIndex = index;
+    await initPerfilUsuario();
     notifyListeners();
   }
 
