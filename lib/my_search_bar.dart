@@ -240,7 +240,6 @@ class _MyDateTimePickerState extends State<MyDateTimePicker> {
       }
       );
 
-    print(_dateTimeDesde);
     final Widget timePickerDesde = Center(
       child: Column(
         children: [

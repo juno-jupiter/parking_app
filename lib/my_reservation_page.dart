@@ -404,7 +404,7 @@ class _MyReservationPageState extends State<MyReservationPage> {
                       Navigator.popUntil(context, (route) => route.isFirst);
                       appState.selectNavigationIndex(NavigationPageIndex.scheduled);
                       // navegar a reserva creada
-                      print('reserva creada ${appState.ultimaReservaCreada?.idBoletaReserva}');
+                      //print('reserva creada ${appState.ultimaReservaCreada?.idBoletaReserva}');
                       if (appState.ultimaReservaCreada != null) {
                         appState.scheduledPageSelectedIndex = BoletaReserva.estadosReserva.indexOf(estadoReserva);
                         final snackBar = SnackBar(content: Text((estadoReserva == BoletaReserva.estadoPendiente) ? 'Solicitud enviada' : 'Reserva éxitosa'),);

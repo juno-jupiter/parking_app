@@ -30,9 +30,11 @@ class _MyMapPageState extends State<MyMapPage> {
       numEstacionamientos += location.estacionamientosLista.length;
     }
 
+    Widget centerSelf = const NearMeButton();
+
     Widget mapView = FlutterMap(
       options: MapOptions(
-        center: const LatLng(-33.45260687351389, -70.59197637461642),
+        center: appState.posicionUsuario,
         zoom: 17.0,
         maxZoom: 18.0,
         minZoom: 12.0,
@@ -101,7 +103,7 @@ class _MyMapPageState extends State<MyMapPage> {
     return Stack(
       children: [
         mapView,
-        Column(children: [const SizedBox(height: MySearchBar.topMargin,), searchBar,],),
+        Column(children: [const SizedBox(height: MySearchBar.topMargin,), searchBar, Align(alignment: Alignment.centerRight, child: centerSelf)],),
         Column(children: locationCardViewChildren,),
       ],
     );
@@ -163,5 +165,31 @@ class MyMarkerLayer extends StatelessWidget {
 
   MarkerLayer getMarkerLayer(BuildContext context, MyAppState appState, List<Location> locationLista) {
     return MarkerLayer(markers: getMarkers(context, appState, locationLista),);
+  }
+}
+
+
+class NearMeButton extends StatelessWidget {
+  const NearMeButton({super.key});
+
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = Provider.of<MyAppState>(context, listen: true);
+
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 55, maxWidth: 55),
+        child: Center(
+          child: ElevatedButton(
+            onPressed: ()  {
+              appState.toggleSearch();
+            },
+            child: const Align(alignment: Alignment.centerLeft, child: Icon(Icons.near_me)),
+          ),
+        ),
+      ),
+    );
   }
 }

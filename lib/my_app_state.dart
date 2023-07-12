@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:parking_app/table_entities.dart';
+import 'package:parking_app/geolocator_widget.dart';
+import 'package:latlong2/latlong.dart';
 
 class NavigationPageIndex {
   static const main = 0;
@@ -44,6 +47,8 @@ class MyAppState extends ChangeNotifier {
   Function? reloadCallBack;
   BoletaReserva? ultimaReservaCreada;
 
+  LatLng posicionUsuario = const LatLng(-33.45260687351389, -70.59197637461642);
+
   Future<void> initPerfilUsuario() async {
     perfilUsuario = await Perfil.getPerfil(database, idPerfil);
     if (perfilUsuario != null) {
@@ -68,6 +73,7 @@ class MyAppState extends ChangeNotifier {
 
   Future<List<Location>> getLocationList({SearchFilters? filters}) async {
     if (isFirstSearch) {
+      await updatePosition();
       initPerfilUsuario();
     }
     if (filters == null) isFirstSearch = false;
@@ -93,13 +99,18 @@ class MyAppState extends ChangeNotifier {
     await toggleSearch();
   }
 
+  Future<void> updatePosition() async {
+    Position position = await Locator.determinePosition();
+    posicionUsuario = LatLng(position.latitude, position.longitude);
+    print(posicionUsuario);
+  }
+
   Future<void> toggleSearch() async {
-    reloadCallBack!(this);
+    if (reloadCallBack != null) reloadCallBack!(this);
+    await updatePosition();
     if (selectedLocation != null) {
       List<Location> tempLocationList = await getLocationList();
-      if (!tempLocationList.contains(selectedLocation)) {
-        selectedLocation = null;
-      }
+      if (!tempLocationList.contains(selectedLocation)) selectedLocation = null;
     }
     notifyListeners();
   }
